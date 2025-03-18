@@ -50,9 +50,6 @@ class MeterPredictor:
             output_folder (str, None): Folder where to save results
         """
 
-        if rotated_180:
-            input_image = input_image.rotate(180)
-
         results = self.model.predict(input_image, save=False)
         obb_data = results[0].obb
 
@@ -120,6 +117,11 @@ class MeterPredictor:
         rotated_cropped_img_ext = None
         if extended_last_digit:
             rotated_cropped_img_ext = cv2.warpPerspective(img, M, (max_width, int(max_height * 1.2)))
+
+        if rotated_180:
+            rotated_cropped_img = cv2.rotate(rotated_cropped_img, cv2.ROTATE_180)
+            if extended_last_digit:
+                rotated_cropped_img_ext = cv2.rotate(rotated_cropped_img_ext, cv2.ROTATE_180)
 
         # 7. Split the cropped meter into segments vertical parts for classification
         if (segments == 0): return [],[]

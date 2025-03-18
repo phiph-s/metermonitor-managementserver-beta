@@ -94,7 +94,7 @@
             </tr>
             <tr v-if="evalDecoded[4]">
               <td v-for="[i, digit] in (evalDecoded[4] + '').padStart(evalDecoded[1].length, '0').split('').entries()" :key="i + 'f'" style="text-align: center;">
-                <span class="prediction red" v-if="digit !== evalDecoded[2][i][0][0]">
+                <span :class="{adjustment: true, red: evalDecoded[2][i][0][0] !== 'r'}" v-if="digit !== evalDecoded[2][i][0][0]">
                   {{ digit }}
                 </span>
               </td>
@@ -339,6 +339,12 @@ const resetToSetup = async () => {
 .prediction{
   margin: 3px;
   font-size: 20px;
+}
+
+.adjustment{
+  font-size: 20px;
+  margin: 3px;
+  color: aqua;
 }
 
 .red{
