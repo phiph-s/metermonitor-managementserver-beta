@@ -16,7 +16,7 @@ WORKDIR /docker-app
 COPY . /docker-app
 
 # Install Python dependencies in the final container
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && rm -rf /usr/local/cuda/ && rm -rf /usr/local/nvidia/ && rm -rf /root/.cache/pip
 
 # Copy the built frontend
 COPY --from=frontend-builder /frontend/dist /docker-app/frontend/dist
