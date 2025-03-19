@@ -1,30 +1,37 @@
-# Basis-Image wählen (Python 3.9 als Beispiel)
-FROM ultralytics/ultralytics:latest-cpu
+# Use a minimal Python base image
+FROM python:3.11-alpine as base
 
-# Arbeitsverzeichnis festlegen
+# Set working directory
 WORKDIR /docker-app
 
-# Alle Dateien in das Arbeitsverzeichnis kopieren
-COPY . /docker-app
+# Copy only requirements first to leverage caching
+COPY requirements.txt /docker-app/
 
-# install nodejs
-RUN apt-get update
-RUN apt-get install -y nodejs npm tesseract-ocr
-RUN npm install -g yarn
-
-# Go to frontend and run yarn install
-WORKDIR /docker-app/frontend
-RUN yarn install
-RUN yarn build
-
-# Go back to root directory
-WORKDIR /docker-app
-
-# Abhängigkeiten installieren
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Falls dein Webserver auf einem bestimmten Port (z. B. 5000) lauscht:
+# Separate build stage for frontend using a Node container
+FROM node:18-alpine as frontend-builder
+
+WORKDIR /frontend
+COPY frontend /frontend
+
+# Install dependencies and build frontend
+RUN yarn install && yarn build
+
+# Final image to keep it minimal
+FROM python:3.11-alpine
+
+WORKDIR /docker-app
+
+# Copy backend files
+COPY --from=base /docker-app /docker-app
+
+# Copy the built frontend
+COPY --from=frontend-builder /frontend/dist /docker-app/frontend/dist
+
+# Expose the application port
 EXPOSE 8070
 
-# Kommando zum Starten der Anwendung
+# Command to run the application
 CMD ["python", "run.py", "--setup"]
