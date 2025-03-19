@@ -144,8 +144,7 @@ class MeterPredictor:
             part = rotated_cropped_img[:, last_x: last_x + t_part_width]
 
             if extended_last_digit and i == segments - 1:
-                part = rotated_cropped_img_ext[:, i * t_part_width: (i + 1) * t_part_width]
-
+                part = rotated_cropped_img_ext[:, last_x: last_x + t_part_width]
             last_x = last_x + t_part_width
 
             # Convert segment to base64 string for storage

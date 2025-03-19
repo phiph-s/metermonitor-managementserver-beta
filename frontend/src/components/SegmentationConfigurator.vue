@@ -4,32 +4,55 @@
       <img v-if="lastPicture" :src="'data:image/'+lastPicture.picture.format+';base64,' + lastPicture.picture.data" alt="Watermeter" :class="{rotated: nrotated180}" />
     </template>
     <br>
-    <label>
-      <input type="number" v-model="nsegments" max="10" min="5" style="max-width: 32px"/>
-      Segments
-    </label><br>
-    <label>
-      <input type="checkbox" v-model="nextendedLastDigit"/>
-      Extended last digit
-    </label><br>
-    <label>
-      <input type="checkbox" v-model="nlast3DigitsNarrow"/>
-      Last 3 digits are narrow
-    </label>
-    <label>
-    <input type="checkbox" v-model="nrotated180"/>
-      180° rotated
-    </label>
+    <n-tooltip>
+      <template #trigger>
+        Segments
+      </template>
+      <span>Number of segments (5-10)</span>
+    </n-tooltip>
+    <n-input-number v-model:value="nsegments" :max="10" :min="5">
+    </n-input-number>
+    <n-divider dashed></n-divider>
+    <n-checkbox v-model:checked="nextendedLastDigit">
+      <n-tooltip>
+        <template #trigger>
+          <span>Extended last digit</span>
+        </template>
+        <span>Enable if the last digits display is bigger<br>compared to the other digits</span>
+      </n-tooltip>
+    </n-checkbox><br>
+    <n-checkbox v-model:checked="nlast3DigitsNarrow">
+      <n-tooltip>
+        <template #trigger>
+          <span>Last 3 digits are narrow</span>
+        </template>
+        <span>Enable if the last three digits displays are narrower<br>compared to the other digits</span>
+      </n-tooltip>
+    </n-checkbox><br>
+    <n-checkbox v-model:checked="nrotated180">
+      <n-tooltip>
+        <template #trigger>
+          <span>180° rotated</span>
+        </template>
+        <span>Enable if the captured image is rotated 180°</span>
+      </n-tooltip>
+    </n-checkbox><br>
     <template #action v-if="nencodedLatest">
       <n-flex justify="space-around" size="large">
         <img class="digit" v-for="base64 in JSON.parse(nencodedLatest)[0]" :src="'data:image/png;base64,' + base64" :key="base64" alt="D" style="max-width: 40px"/>
       </n-flex>
     </template>
+    <n-flex justify="end" size="large">
+      <n-button
+          @click="emits('next')"
+          type="primary"
+      >Next</n-button>
+    </n-flex>
   </n-card>
 </template>
 
 <script setup>
-import {NCard, NFlex} from 'naive-ui';
+import {NCard, NFlex, NInputNumber, NCheckbox, NDivider, NButton, NTooltip} from 'naive-ui';
 import {defineProps, defineEmits, ref, watch} from 'vue';
 
 const props = defineProps([
@@ -40,7 +63,7 @@ const props = defineProps([
     'encodedLatest',
     'rotated180'
 ]);
-const emits = defineEmits(['update']);
+const emits = defineEmits(['update', 'next']);
 
 watch(() => props.segments, (newVal) => {
   nsegments.value = newVal;

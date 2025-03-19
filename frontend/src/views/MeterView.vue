@@ -4,12 +4,15 @@
   </n-button></router-link><br><br>
   <n-flex size="large">
     <div  style="max-width: 300px">
-      <n-card v-if="data" :title="new Date(data.picture.timestamp).toLocaleString()" size="small">
+      <n-card v-if="data" :title="id" size="small">
+        <template #header-extra>
+          {{new Date(data.picture.timestamp).toLocaleString()}}
+        </template>
         <template #cover>
           <img :src="'data:image/'+data.picture.format+';base64,' + data.picture.data" alt="Watermeter" :class="{rotated: rotated180}"/>
         </template>
       </n-card>
-      <n-divider/>
+      <br>
       <n-popconfirm
         @positive-click="resetToSetup"
       >
@@ -18,7 +21,7 @@
             Enable Setup mode
           </n-button>
         </template>
-        This will reset the history of this meter and enable setup mode. Are you sure?
+        While the meter is in setup mode, no values will be published. Are you sure?
       </n-popconfirm>
 
       <n-popconfirm
@@ -31,82 +34,94 @@
         </template>
         This will delete the meter with all its settings and data. Are you sure?
       </n-popconfirm>
-
-      <n-h6>
-        Settings
-      </n-h6>
-      <b>
-        Thresholds: {{threshold[0]}} - {{threshold[1]}}<br>
-        Last digit thresholds: {{threshold_last[0]}} - {{threshold_last[1]}}<br>
-        Islanding padding: {{islanding_padding}}<br>
-        Segments: {{segments}}<br>
-        Extended last digit: {{extendedLastDigit}}<br>
-        Last 3 digits narrow: {{last3DigitsNarrow}}<br>
-        Rotated 180: {{rotated180}}<br>
-        Invert: {{invert}}
-      </b>
+      <br><br>
+    <n-card size="small">
+      <n-list>
+        <n-list-item>
+          <n-thing title="Thresholds" :title-extra="`${threshold[0]} - ${threshold[1]}`"/>
+        </n-list-item>
+        <n-list-item>
+          <n-thing title="Last digit thresholds" :title-extra="`${threshold_last[0]} - ${threshold_last[1]}`" />
+        </n-list-item>
+        <n-list-item>
+          <n-thing title="Islanding padding" :title-extra="islanding_padding" />
+        </n-list-item>
+        <n-list-item>
+          <n-thing title="Segments" :title-extra="segments" />
+        </n-list-item>
+        <n-list-item>
+          <n-thing title="Extended last digit" :title-extra="extendedLastDigit?'Yes':'No'" />
+        </n-list-item>
+        <n-list-item>
+          <n-thing title="Last 3 digits narrow" :title-extra="last3DigitsNarrow?'Yes':'No'" />
+        </n-list-item>
+        <n-list-item>
+          <n-thing title="Rotated 180" :title-extra="rotated180?'Yes':'No'" />
+        </n-list-item>
+      </n-list>
+    </n-card>
     </div>
     <div style="padding-left: 20px;">
-      <div style="height: calc(100vh - 120px); overflow: scroll;" class="bglight">
-        <n-h2>Last evaluations of {{id}}</n-h2>
+      <n-h4>Last evaluations</n-h4>
+      <div style="height: calc(100vh - 200px); border-radius: 15px; overflow: scroll;" class="bglight">
         <template v-if="decodedEvals">
-      <template v-for="[i, evalDecoded] in decodedEvals.entries()" :key="i">
-        <n-flex :class="{redbg: evalDecoded[4] == null}">
-          <n-flex vertical>
-            {{new Date(evalDecoded[3]).toLocaleString()}}<br>
-            <div v-if="evalDecoded[6]" :style="{color: getColor(evalDecoded[6]), fontSize: '20px'}">
-              <b>{{(evalDecoded[6] * 100).toFixed(1)}}</b>%
-            </div>
-          </n-flex>
-          <table>
-            <tr>
-              <td v-for="base64 in evalDecoded[1]" :key="base64">
-                <img class="digit" :src="'data:image/png;base64,' + base64" alt="Watermeter"/>
-              </td>
-            </tr>
-            <tr>
-              <td v-for="[i, digit] in evalDecoded[2].entries()" :key="i + 'v'" style="text-align: center;">
-                <span class="prediction" >
-                  {{ (digit[0][0]=='r')? '↕' : digit[0][0] }}
-                </span>
-              </td>
-            </tr>
-            <tr>
-              <td v-for="[i, digit] in evalDecoded[2].entries()" :key="i + 'e'" style="text-align: center;">
-                <span class="confidence" :style="{color: getColor(digit[0][1])}">
-                  {{ Math.round(digit[0][1] * 100) }}
-                </span>
-              </td>
-            </tr>
-            <tr v-if="evalDecoded[5]">
-              <td v-for="[i, digit] in evalDecoded[5].entries()" :key="i + 'g'" style="text-align: center;">
-                <span class="prediction" v-if="digit !== evalDecoded[2][i][0][0]">
-                  {{ digit?digit[0]:'' }}
-                </span>
-              </td>
-            </tr>
-            <tr v-if="evalDecoded[5]">
-              <td v-for="[i, digit] in evalDecoded[5].entries()" :key="i + 'h'" style="text-align: center;">
-                <span class="confidence" :style="{color: getColor(digit?digit[1]:0)}">
-                  {{ digit?digit[1]:'' }}
-                </span>
-              </td>
-            </tr>
-            <tr v-if="evalDecoded[4]">
-              <td v-for="[i, digit] in (evalDecoded[4] + '').padStart(evalDecoded[1].length, '0').split('').entries()" :key="i + 'f'" style="text-align: center;">
-                <span :class="{adjustment: true, red: evalDecoded[2][i][0][0] !== 'r'}" v-if="digit !== evalDecoded[2][i][0][0]">
-                  {{ digit }}
-                </span>
-              </td>
-            </tr>
-          </table>
-        </n-flex>
-        <n-divider/>
-      </template>
-    </template>
+          <template v-for="[i, evalDecoded] in decodedEvals.entries()" :key="i">
+            <n-flex :class="{redbg: evalDecoded[4] == null}">
+              <n-flex vertical>
+                {{new Date(evalDecoded[3]).toLocaleString()}}<br>
+                <div v-if="evalDecoded[6]" :style="{color: getColor(evalDecoded[6]), fontSize: '20px'}">
+                  <b>{{(evalDecoded[6] * 100).toFixed(1)}}</b>%
+                </div>
+              </n-flex>
+              <table>
+                <tr>
+                  <td v-for="base64 in evalDecoded[1]" :key="base64">
+                    <img class="digit" :src="'data:image/png;base64,' + base64" alt="Watermeter"/>
+                  </td>
+                </tr>
+                <tr>
+                  <td v-for="[i, digit] in evalDecoded[2].entries()" :key="i + 'v'" style="text-align: center;">
+                    <span class="prediction" >
+                      {{ (digit[0][0]=='r')? '↕' : digit[0][0] }}
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td v-for="[i, digit] in evalDecoded[2].entries()" :key="i + 'e'" style="text-align: center;">
+                    <span class="confidence" :style="{color: getColor(digit[0][1])}">
+                      {{ Math.round(digit[0][1] * 100) }}
+                    </span>
+                  </td>
+                </tr>
+                <tr v-if="evalDecoded[5]">
+                  <td v-for="[i, digit] in evalDecoded[5].entries()" :key="i + 'g'" style="text-align: center;">
+                    <span class="prediction" v-if="digit !== evalDecoded[2][i][0][0]">
+                      {{ digit?digit[0]:'' }}
+                    </span>
+                  </td>
+                </tr>
+                <tr v-if="evalDecoded[5]">
+                  <td v-for="[i, digit] in evalDecoded[5].entries()" :key="i + 'h'" style="text-align: center;">
+                    <span class="confidence" :style="{color: getColor(digit?digit[1]:0)}">
+                      {{ digit?digit[1]:'' }}
+                    </span>
+                  </td>
+                </tr>
+                <tr v-if="evalDecoded[4]">
+                  <td v-for="[i, digit] in (evalDecoded[4] + '').padStart(evalDecoded[1].length, '0').split('').entries()" :key="i + 'f'" style="text-align: center;">
+                    <span :class="{adjustment: true, red: evalDecoded[2][i][0][0] !== 'r'}" v-if="digit !== evalDecoded[2][i][0][0]">
+                      {{ digit }}
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </n-flex>
+            <n-divider/>
+          </template>
+        </template>
       </div>
     </div>
-    <div>
+    <div style="overflow: hidden;">
       <apex-chart class="bg" width="500" type="line" :series="series" :options="options"></apex-chart>
       <apex-chart class="bg" width="500" type="line" :series="seriesConf" :options="optionsConf"></apex-chart>
     </div>
@@ -114,7 +129,7 @@
 </template>
 
 <script setup>
-import {NH2, NH6, NFlex, NCard, NDivider, NButton, NPopconfirm} from "naive-ui";
+import {NH4, NFlex, NCard, NDivider, NButton, NPopconfirm, NList, NListItem, NThing} from "naive-ui";
 import { useRoute } from 'vue-router';
 import {computed, onMounted, ref} from "vue";
 import router from "@/router";
@@ -315,7 +330,7 @@ const deleteMeter = async () => {
 }
 
 const resetToSetup = async () => {
-  let response = await fetch(process.env.VUE_APP_HOST + 'api/setup/' + id + '/reset', {
+  let response = await fetch(process.env.VUE_APP_HOST + 'api/setup/' + id + '/enable', {
     method: 'POST',
     headers: {
       'secret': `${localStorage.getItem('secret')}`
@@ -363,6 +378,8 @@ const resetToSetup = async () => {
 .bg{
   background-color: rgba(240, 240, 240, 0.8);
   padding: 20px;
+  border-radius: 15px;
+  margin-bottom: 15px;
 }
 
 .bglight{

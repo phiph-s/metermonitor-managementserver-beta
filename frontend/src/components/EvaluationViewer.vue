@@ -2,7 +2,7 @@
   <template v-if="latestEval">
     <n-card>
       <n-flex justify="space-around" size="large">
-        <img class="digit" v-for="[i,base64] in JSON.parse(latestEval)[1].entries()" :key="i + 'c'" :src="'data:image/png;base64,' + base64" alt="D"/>
+        <img class="digit" v-for="[i,base64] in JSON.parse(latestEval)[1].entries()" :key="i + 'c'" :src="'data:image/png;base64,' + base64" alt="D" style="height: 50px"/>
       </n-flex>
       <n-flex justify="space-around" size="large">
         <span class="prediction" v-for="[i, digit] in JSON.parse(latestEval)[2].entries()" :key="i + 'd'">
@@ -25,9 +25,9 @@
         </span>
       </n-flex>
       <n-divider />
-      <n-h3>Manual initial read</n-h3>
-      {{new Date(timestamp).toLocaleString()}}<br>
+      Read initial value
       <n-input-number v-model:value="initialValue" placeholder="Readout" />
+      <span style="color: rgba(255,255,255,0.3)">{{new Date(timestamp).toLocaleString()}}</span><br>
       <template #action>
         <n-flex justify="end" size="large">
           <n-button
@@ -42,7 +42,7 @@
 
 <script setup>
 import {defineProps, ref} from 'vue';
-import {NFlex, NCard, NButton, NInputNumber, NDivider, NH3} from 'naive-ui';
+import {NFlex, NCard, NButton, NInputNumber, NDivider, useDialog} from 'naive-ui';
 import router from "@/router";
 
 const props = defineProps([
@@ -53,7 +53,19 @@ const props = defineProps([
 
 const initialValue = ref(0);
 
+const dialog = useDialog();
+
 const finishSetup = async () => {
+
+  // check if initial value is not 0
+  if (initialValue.value === 0) {
+    dialog.warning({
+      title: 'Initial value',
+      content: 'Please enter a valid initial value'
+    });
+    return;
+  }
+
   // post to /api/setup/{name}/finish
   const r = await fetch(process.env.VUE_APP_HOST + 'api/setup/' + props.meterid + '/finish', {
     method: 'POST',
@@ -68,7 +80,7 @@ const finishSetup = async () => {
   });
 
   if (r.status === 200) {
-    router.push({ path: '/' });
+    router.push({ path: '/meter/' + props.meterid });
   } else {
     console.log('Error finishing setup');
   }

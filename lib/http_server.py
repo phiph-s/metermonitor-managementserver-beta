@@ -51,7 +51,6 @@ def prepare_setup_app(config, lifespan):
 
     # Authentication
     def authenticate(secret: str = Header(None)):
-        print (secret, SECRET_KEY)
         if secret != SECRET_KEY:
             raise HTTPException(status_code=401, detail="Unauthorized")
 
@@ -129,20 +128,19 @@ def prepare_setup_app(config, lifespan):
         db = db_connection()
         cursor = db.cursor()
         cursor.execute("UPDATE watermeters SET setup = 1 WHERE name = ?", (name,))
+        # clear evaluations
+        cursor.execute("DELETE FROM evaluations WHERE name = ?", (name,))
         db.commit()
         target_brightness, confidence = reevaluate_latest_picture(config['dbfile'], name, meter_preditor, config)
         add_history_entry(config['dbfile'], name, data.value, confidence, target_brightness, data.timestamp, config, manual=True)
+
         return {"message": "Setup completed"}
 
-    @app.post("/api/setup/{name}/reset", dependencies=[Depends(authenticate)])
-    def post_setup_reset(name: str):
+    @app.post("/api/setup/{name}/enable", dependencies=[Depends(authenticate)])
+    def post_setup_enable(name: str):
         db = db_connection()
         cursor = db.cursor()
         cursor.execute("UPDATE watermeters SET setup = 0 WHERE name = ?", (name,))
-
-        # clear history
-        cursor.execute("DELETE FROM history WHERE name = ?", (name,))
-
         db.commit()
         return {"message": "Setup completed"}
 

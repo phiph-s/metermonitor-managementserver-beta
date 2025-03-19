@@ -3,40 +3,36 @@
     <n-flex>
       <div>
         <n-flex justify="space-around" size="large" v-if="encoded">
-          <img class="digit" v-for="[i,base64] in JSON.parse(encoded)[0].slice(0,-3).entries()" :src="'data:image/png;base64,' + base64" :key="i+'a'" alt="D" style="max-width: 40px"/>
+          <img class="digit" v-for="[i,base64] in JSON.parse(encoded)[0].slice(0,-3).entries()" :src="'data:image/png;base64,' + base64" :key="i+'a'" alt="D" style="height: 50px"/>
         </n-flex>
+        <br>
         <n-flex justify="space-around" size="large" v-if="tresholdedImages">
-          <img class="digit" v-for="[i,base64] in tresholdedImages.slice(0,-3).entries()" :src="'data:image/png;base64,' + base64" :key="i+'b'" alt="Watermeter"/>
+          <img class="digit" v-for="[i,base64] in tresholdedImages.slice(0,-3).entries()" :src="'data:image/png;base64,' + base64" :key="i+'b'" alt="Watermeter" style="height: 50px" />
         </n-flex>
-
-        <n-divider dashed></n-divider>
-        Thresholds
+        <br>
         <n-slider v-model:value="nthreshold" range :step="1" :max="255" @mouseup="sendUpdate" style="max-width: 150px;"/>
+        {{threshold[0]}} - {{threshold[1]}}
       </div>
       <div>
         <n-flex justify="space-around" size="large" v-if="encoded">
-          <img class="digit" v-for="[i,base64] in JSON.parse(encoded)[0].slice(-3).entries()" :src="'data:image/png;base64,' + base64" :key="i+'a'" alt="D" style="max-width: 40px"/>
+          <img class="digit" v-for="[i,base64] in JSON.parse(encoded)[0].slice(-3).entries()" :src="'data:image/png;base64,' + base64" :key="i+'a'" alt="D" style="height: 50px"/>
         </n-flex>
+        <br>
         <n-flex justify="space-around" size="large" v-if="tresholdedImages">
-          <img class="digit" v-for="[i,base64] in tresholdedImages.slice(-3).entries()" :src="'data:image/png;base64,' + base64" :key="i+'b'" alt="Watermeter"/>
+          <img class="digit" v-for="[i,base64] in tresholdedImages.slice(-3).entries()" :src="'data:image/png;base64,' + base64" :key="i+'b'" alt="Watermeter" style="height: 50px"/>
         </n-flex>
-
-        <n-divider dashed></n-divider>
-        Thresholds (last 3)
+        <br>
         <n-slider v-model:value="nthreshold_last" range :step="1" :max="255" @mouseup="sendUpdate" style="max-width: 150px;"/>
+        {{threshold_last[0]}} - {{threshold_last[1]}}
       </div>
     </n-flex>
     <n-divider></n-divider>
-    <label>
-      <input type="checkbox" v-model="ninvert"/>
-      Invert colors
-    </label><br><br>
     Extraction padding
       <n-slider v-model:value="islanding_padding" :step="1" :max="100" @mouseup="sendUpdate" style="max-width: 150px;"/>
     <template #action>
       <n-flex justify="end" size="large">
         <n-button
-            @click="emits('reevaluate')"
+            @click="() => {emits('reevaluate');emits('next')}"
             type="primary"
         >(Re)evaluate</n-button>
       </n-flex>
@@ -56,7 +52,7 @@ const props = defineProps([
     'invert'
 ]);
 
-const emits = defineEmits(['update', 'reevaluate']);
+const emits = defineEmits(['update', 'reevaluate', 'next']);
 
 const nthreshold = ref(props.threshold);
 const nthreshold_last = ref(props.threshold_last);
@@ -66,8 +62,9 @@ const ninvert = ref(props.invert);
 const tresholdedImages = ref([]);
 const refreshing = ref(false);
 
-
-
+watch(() => props.encoded, () => {
+  refreshThresholds();
+});
 watch(() => props.threshold, (newVal) => {
   nthreshold.value = newVal;
 });

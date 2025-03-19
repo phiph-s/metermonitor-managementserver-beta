@@ -1,14 +1,14 @@
 <template>
-
-  <n-config-provider :theme="darkTheme" :theme-overrides="themeOverrides">
-    <app></app>
-  </n-config-provider>
-
+    <n-config-provider :theme="darkTheme" :theme-overrides="themeOverrides">
+        <n-dialog-provider>
+          <app></app>
+        </n-dialog-provider>
+    </n-config-provider>
 </template>
 
 <script setup>
 import App from "@/App.vue";
-import { NConfigProvider } from 'naive-ui';
+import { NConfigProvider, NDialogProvider } from 'naive-ui';
 import { darkTheme } from 'naive-ui';
 
 const themeOverrides = {
