@@ -1,15 +1,3 @@
-# Use a minimal Python base image
-FROM python:3.11-alpine as base
-
-# Set working directory
-WORKDIR /docker-app
-
-# Copy only requirements first to leverage caching
-COPY requirements.txt /docker-app/
-
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
 # Separate build stage for frontend using a Node container
 FROM node:18-alpine as frontend-builder
 
@@ -25,7 +13,10 @@ FROM python:3.11-alpine
 WORKDIR /docker-app
 
 # Copy backend files
-COPY --from=base /docker-app /docker-app
+COPY . /docker-app
+
+# Install Python dependencies in the final container
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the built frontend
 COPY --from=frontend-builder /frontend/dist /docker-app/frontend/dist
