@@ -6,7 +6,6 @@ from io import BytesIO
 import cv2
 import numpy as np
 from PIL import Image
-import torch
 from pytesseract import pytesseract, Output
 from ultralytics import YOLO
 from tensorflow.keras.models import load_model
@@ -28,7 +27,6 @@ class MeterPredictor:
         """
         # Load YOLO model (oriented bounding box capable)
         self.model = YOLO(yolo_model_path)
-        self.model.to('cuda' if torch.cuda.is_available() else 'cpu')
 
         # Define the model architecture (same as during training)
         self.digitmodel = load_model('models/th_digit_classifier_2.h5')
