@@ -1,9 +1,12 @@
 <template>
-  <router-link to="/"><n-button quaternary round type="primary" size="large" style="padding: 0; font-size: 16px;">
-     ← Back
-  </n-button></router-link>
 
-  <h2>Setup for {{ id }}</h2>
+  <n-flex>
+    <router-link to="/"><n-button quaternary round type="primary" size="large" style="padding: 0; font-size: 16px;">
+       ← Back
+    </n-button></router-link>
+    <n-button :loading="loading" @click="getData" round size="large" style="margin-left: 20px;">Refresh</n-button>
+  </n-flex>
+    <n-h2>Setup for {{ id }}</n-h2>
 
   <n-steps :current="currentStep">
     <n-step
@@ -73,11 +76,13 @@
 <script setup>
 import {onMounted, ref} from 'vue';
 import router from "@/router";
-import { NSteps, NStep, NButton, NAlert } from 'naive-ui';
+import { NSteps, NStep, NButton, NAlert, NFlex, NH2 } from 'naive-ui';
 import { useRoute } from 'vue-router';
 import SegmentationConfigurator from "@/components/SegmentationConfigurator.vue";
 import ThresholdPicker from "@/components/ThresholdPicker.vue";
 import EvaluationViewer from "@/components/EvaluationViewer.vue";
+
+const loading = ref(false);
 
 const route = useRoute();
 const id = route.params.id;
@@ -107,6 +112,7 @@ const rotated180 = ref(false);
 const invert = ref(false);
 
 const getData = async () => {
+  loading.value = true;
   let response = await fetch(process.env.VUE_APP_HOST + 'api/watermeters/' + id, {
     headers: {
       'secret': `${localStorage.getItem('secret')}`
@@ -138,6 +144,8 @@ const getData = async () => {
   last3DigitsNarrow.value = result.shrink_last_3 === 1;
   rotated180.value = result.rotated_180 === 1;
   invert.value = result.invert === 1;
+
+  loading.value = false;
 }
 
 onMounted(() => {

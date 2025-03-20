@@ -7,7 +7,7 @@ from typing import Dict, Any
 
 from lib.functions import reevaluate_latest_picture, publish_registration
 from lib.meter_processing.meter_processing import MeterPredictor
-
+import traceback
 
 class MQTTHandler:
     def __init__(self,config, db_file: str = 'watermeters.db', forever: bool = False):
@@ -86,75 +86,80 @@ class MQTTHandler:
         return True
 
     def _process_message(self, data: Dict[str, Any]):
-        if not self._validate_message(data):
-            print("Invalid message format")
-            return
+        try:
+            if not self._validate_message(data):
+                print("Invalid message format")
+                return
 
-        with sqlite3.connect(self.db_file) as conn:
-            cursor = conn.cursor()
-            #check if watermeter exists
-            cursor.execute("SELECT * FROM watermeters WHERE name = ?", (data['name'],))
-            if not cursor.fetchone():
-                cursor.execute('''
-                    INSERT INTO watermeters
-                    VALUES (?,?,?,?,?,?,?,?,?,?)
-                ''', (
-                    data['name'],
-                    data['picture_number'],
-                    data['WiFi-RSSI'],
-                    data['picture']['format'],
-                    data['picture']['timestamp'],
-                    data['picture']['width'],
-                    data['picture']['height'],
-                    data['picture']['length'],
-                    data['picture']['data'],
-                    0
-                ))
-                cursor.execute('''
-                                INSERT OR IGNORE INTO settings
-                                VALUES (?,?,?,?,?,?,?,?,?,?,?)
-                            ''', (
-                    data['name'],
-                    0,
-                    100,
-                    0,
-                    100,
-                    20,
-                    7,
-                    False,
-                    False,
-                    False,
-                    False
-                ))
-
-                publish_registration(self.client, self.config, data['name'], "value")
-            else:
-                cursor.execute('''
-                        UPDATE watermeters 
-                        SET 
-                            picture_number = ?, 
-                            wifi_rssi = ?, 
-                            picture_format = ?, 
-                            picture_timestamp = ?, 
-                            picture_width = ?, 
-                            picture_height = ?, 
-                            picture_length = ?, 
-                            picture_data = ?
-                        WHERE name = ?
+            with sqlite3.connect(self.db_file) as conn:
+                cursor = conn.cursor()
+                #check if watermeter exists
+                cursor.execute("SELECT * FROM watermeters WHERE name = ?", (data['name'],))
+                if not cursor.fetchone():
+                    cursor.execute('''
+                        INSERT INTO watermeters
+                        VALUES (?,?,?,?,?,?,?,?,?,?)
                     ''', (
-                    data['picture_number'],
-                    data['WiFi-RSSI'],
-                    data['picture']['format'],
-                    data['picture']['timestamp'],
-                    data['picture']['width'],
-                    data['picture']['height'],
-                    data['picture']['length'],
-                    data['picture']['data'],
-                    data['name']
-                ))
-            conn.commit()
-            print(f"MQTT-Handler: Data saved for {data['name']}")
-        reevaluate_latest_picture(self.db_file, data['name'], self.meter_preditor, self.config, publish=True, mqtt_client=self.client)
+                        data['name'],
+                        data['picture_number'],
+                        data['WiFi-RSSI'],
+                        data['picture']['format'],
+                        data['picture']['timestamp'],
+                        data['picture']['width'],
+                        data['picture']['height'],
+                        data['picture']['length'],
+                        data['picture']['data'],
+                        0
+                    ))
+                    cursor.execute('''
+                                    INSERT OR IGNORE INTO settings
+                                    VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                                ''', (
+                        data['name'],
+                        0,
+                        100,
+                        0,
+                        100,
+                        20,
+                        7,
+                        False,
+                        False,
+                        False,
+                        False
+                    ))
+
+                    publish_registration(self.client, self.config, data['name'], "value")
+                else:
+                    cursor.execute('''
+                            UPDATE watermeters 
+                            SET 
+                                picture_number = ?, 
+                                wifi_rssi = ?, 
+                                picture_format = ?, 
+                                picture_timestamp = ?, 
+                                picture_width = ?, 
+                                picture_height = ?, 
+                                picture_length = ?, 
+                                picture_data = ?
+                            WHERE name = ?
+                        ''', (
+                        data['picture_number'],
+                        data['WiFi-RSSI'],
+                        data['picture']['format'],
+                        data['picture']['timestamp'],
+                        data['picture']['width'],
+                        data['picture']['height'],
+                        data['picture']['length'],
+                        data['picture']['data'],
+                        data['name']
+                    ))
+                conn.commit()
+                print(f"MQTT-Handler: Data saved for {data['name']}")
+            reevaluate_latest_picture(self.db_file, data['name'], self.meter_preditor, self.config, publish=True, mqtt_client=self.client)
+        except Exception as e:
+            print(f"MQTT-Handler: Error processing message: {e}")
+            # print traceback
+            traceback.print_exc()
 
     def start(self,
               broker: str = 'localhost',

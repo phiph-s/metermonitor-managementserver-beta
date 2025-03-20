@@ -52,6 +52,11 @@ def reevaluate_latest_picture(db_file: str, name:str, meter_preditor, config, pu
         image = Image.open(BytesIO(image_data))
         result, digits, target_brightness = meter_preditor.predict_single_image(image, segments=segments, shrink_last_3=shrink_last_3,
                                                                   extended_last_digit=extended_last_digit, rotated_180=rotated_180, target_brightness=target_brightness)
+
+        if not result or len(result) == 0:
+            print(f"Meter-Eval: No result found for {name}")
+            return None
+
         processed = []
         prediction = []
         if len(thresholds) == 0:

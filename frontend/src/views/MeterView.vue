@@ -1,7 +1,10 @@
 <template>
-  <router-link to="/"><n-button quaternary round type="primary" size="large" style="padding: 0; font-size: 16px;">
-   ← Back
-  </n-button></router-link><br><br>
+  <n-flex>
+    <router-link to="/"><n-button quaternary round type="primary" size="large" style="padding: 0; font-size: 16px;">
+       ← Back
+    </n-button></router-link>
+    <n-button :loading="loading" @click="loadMeter" round size="large" style="margin-left: 20px;">Refresh</n-button>
+  </n-flex><br>
   <n-flex size="large">
     <div  style="max-width: 300px">
       <n-card v-if="data" :title="id" size="small">
@@ -61,9 +64,9 @@
       </n-list>
     </n-card>
     </div>
-    <div style="padding-left: 20px;">
-      <n-h4>Last evaluations</n-h4>
+    <div style="padding-left: 20px; padding-right: 10px;">
       <div style="height: calc(100vh - 200px); border-radius: 15px; overflow: scroll;" class="bglight">
+        <n-h4 style="position: sticky; top: 0">Last evaluations</n-h4>
         <template v-if="decodedEvals">
           <template v-for="[i, evalDecoded] in decodedEvals.entries()" :key="i">
             <n-flex :class="{redbg: evalDecoded[4] == null}">
@@ -143,6 +146,8 @@ onMounted(() => {
   loadMeter();
 });
 
+const loading = ref(false);
+
 const data = ref(null);
 const evaluations = ref(null);
 const history = ref(null);
@@ -174,6 +179,7 @@ function getColor(value) {
 }
 
 const loadMeter = async () => {
+  loading.value = true;
   let response = await fetch(process.env.VUE_APP_HOST + 'api/watermeters/' + id, {
     headers: {
       'secret': `${localStorage.getItem('secret')}`
@@ -212,6 +218,8 @@ const loadMeter = async () => {
   last3DigitsNarrow.value = result.shrink_last_3 === 1;
   rotated180.value = result.rotated_180 === 1;
   invert.value = result.invert === 1;
+
+  loading.value = false;
 }
 
 const series = computed(() => {

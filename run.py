@@ -98,15 +98,13 @@ with open(path, 'r') as file:
             thread = threading.Thread(target=run_mqtt, daemon=True)
             thread.start()
             yield
-            # stop mqtt_handler
-            thread.stop()
 
         app = prepare_setup_app(config, lifespan)
 
         # print routes
         print(app.routes)
 
-        uvicorn.run(app, host="0.0.0.0", port=8070)
+        uvicorn.run(app, host="0.0.0.0", port=8070, log_level="error")
 
     else:
         print(config)

@@ -60,6 +60,10 @@ class MeterPredictor:
             [],[]
 
         # We'll use the first detected bounding box
+
+        if len(obb_data.xyxyxyxy) == 0:
+            return [],[], None
+
         obb_coords = obb_data.xyxyxyxy[0].cpu().numpy()
         img = np.array(input_image)
 
@@ -152,7 +156,6 @@ class MeterPredictor:
         adjusted_images = []
         if target_brightness is None:
             target_brightness = np.mean(mean_brightnesses)
-        print(f"Target brightness: {target_brightness}")
         for img, mean_brightness in zip(digits, mean_brightnesses):
             adjustment_factor = target_brightness / mean_brightness
             adjusted_img = np.clip(img * adjustment_factor, 0, 255).astype(np.uint8)
@@ -179,9 +182,6 @@ class MeterPredictor:
 
         threshold_low, threshold_high = int(threshold_low), int(threshold_high)
         islanding_padding = int(islanding_padding)
-
-        print(f"Thresholds: {threshold_low}, {threshold_high}")
-        print(f"Islanding padding: {islanding_padding}")
 
         # Convert the digit image to grayscale.
         digit = cv2.cvtColor(digit, cv2.COLOR_BGR2GRAY)
