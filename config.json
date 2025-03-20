@@ -19,7 +19,7 @@
     "allow_negative_correction": true,
     "publish_to": "homeassistant/sensor/watermeter_{device}/",
     "mqtt": {
-      "broker": "192.168.178.24",
+      "broker": "172.30.32.1",
       "port": 1883,
       "topic": "MeterMonitor/#",
       "username": "esp",
