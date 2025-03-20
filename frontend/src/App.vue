@@ -11,9 +11,37 @@
 </template>
 
 <script setup>
-import {NLayout, NLayoutContent, NSpace} from 'naive-ui';
+import {NLayout, NLayoutContent, NSpace, useNotification} from 'naive-ui';
+import {onMounted, onUnmounted, ref} from "vue";
 
-//
+const alerts = ref([]);
+
+const notification = useNotification();
+
+const updateAlerts = async () => {
+  alerts.value = await fetch(process.env.VUE_APP_HOST + 'api/alerts', {
+    headers: {secret: localStorage.getItem('secret')}
+  }).then(r => r.json());
+
+  notification.destroyAll();
+  for (const alert of Object.keys(alerts.value)) {
+    notification.create({
+      title: alert.toUpperCase(),
+      content: alerts.value[alert],
+      closable: false,
+      type: 'error'
+    });
+  }
+}
+const interval = ref(null);
+onMounted(() => {
+  updateAlerts();
+  interval.value = setInterval(updateAlerts, 60000);
+});
+
+onUnmounted(() => {
+  clearInterval(interval.value);
+});
 
 </script>
 <style>

@@ -9,6 +9,8 @@ from lib.functions import reevaluate_latest_picture, publish_registration
 from lib.meter_processing.meter_processing import MeterPredictor
 import traceback
 
+from lib.global_alerts import add_alert, remove_alert
+
 class MQTTHandler:
     def __init__(self,config, db_file: str = 'watermeters.db', forever: bool = False):
         self.db_file = db_file
@@ -25,8 +27,12 @@ class MQTTHandler:
     def _on_connect(self, client, userdata, flags, reason_code, properties):
         if reason_code == 0:
             print("Successfully connected to MQTT broker")
+            remove_alert("mqtt")
         else:
             print(f"Connection failed with code {reason_code}")
+            add_alert("mqtt", "Failed to connect to MQTT broker")
+            self._reconnect()
+            return
 
         # send registration message for all watermeters
         with sqlite3.connect(self.db_file) as conn:
@@ -38,6 +44,7 @@ class MQTTHandler:
 
     def _on_disconnect(self, client, userdata, rc, properties=None, packet=None, reason=None):
         print(f"Disconnected with code {rc}")
+        add_alert("mqtt", "Disconnected from MQTT broker")
         if self.should_reconnect:
             self._reconnect()
 
@@ -46,11 +53,14 @@ class MQTTHandler:
         delay = 1  # Initial delay in seconds
         max_delay = 60  # Maximum delay to avoid too frequent reconnections
 
+        add_alert("mqtt", "Reconnecting to MQTT broker")
+
         while self.should_reconnect:
             try:
                 print(f"Reconnecting to MQTT broker {self.broker}:{self.port}...")
                 self.client.reconnect()
                 print("Reconnected successfully")
+                remove_alert("mqtt")
                 return  # Exit loop on success
             except Exception as e:
                 print(f"Reconnect failed: {e}, retrying in {delay} seconds...")
@@ -168,6 +178,8 @@ class MQTTHandler:
               username: str = None,
               password: str = None):
 
+        add_alert("mqtt", "Connecting to MQTT broker")
+
         self.client.on_connect = self._on_connect
         self.client.on_message = self._on_message
         self.client.on_disconnect = self._on_disconnect
@@ -175,7 +187,12 @@ class MQTTHandler:
         if username and password:
             self.client.username_pw_set(username, password)
 
-        self.client.connect(broker, port)
+        try:
+            self.client.connect(broker, port)
+        except Exception as e:
+            print(f"MQTT-Handler: Error connecting to MQTT broker: {e}")
+            add_alert("mqtt", f"Failed to connect to MQTT broker: {e}")
+            return
         self.client.subscribe(topic)
         if self.forever:
             self.client.loop_forever()

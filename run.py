@@ -76,7 +76,7 @@ with open(path, 'r') as file:
 
     if config['http']['enabled']:
         @asynccontextmanager
-        async def lifespan(app: FastAPI):
+        async def lifespan(_: FastAPI):
             def run_mqtt():
                 mqtt_handler = MQTTHandler(config, db_file=config['dbfile'], forever=True)
                 mqtt_handler.start(**MQTT_CONFIG)

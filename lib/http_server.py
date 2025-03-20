@@ -15,6 +15,7 @@ from starlette.requests import Request
 
 from lib.functions import reevaluate_latest_picture, add_history_entry
 from lib.meter_processing.meter_processing import MeterPredictor
+from lib.global_alerts import get_alerts
 
 
 # http server class
@@ -117,6 +118,10 @@ def prepare_setup_app(config, lifespan):
 
             # Return the result
             return {"base64": base64r}
+
+    @app.get("/api/alerts", dependencies=[Depends(authenticate)])
+    def get_current_alerts():
+        return get_alerts()
 
     @app.get("/api/watermeters", dependencies=[Depends(authenticate)])
     def get_watermeters():
