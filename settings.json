@@ -8,6 +8,7 @@
       "username": "esp",
       "password": "esp"
     },
+    "ingress": false,
     "allow_negative_correction": true,
     "enable_auth": true,
     "secret_key": "change_me",

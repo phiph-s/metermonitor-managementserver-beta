@@ -23,6 +23,7 @@
       "password": "esp"
     },
     "allow_negative_correction": true,
+    "ingress": true,
     "enable_auth": false,
     "secret_key": "change_me",
     "http": {
@@ -40,6 +41,7 @@
     "max_history": "int(1,)",
     "max_evals": "int(1,)",
     "allow_negative_correction": "bool",
+    "ingress": "bool",
     "http": {
       "enabled": "bool",
       "host": "str",
