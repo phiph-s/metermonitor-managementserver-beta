@@ -1,6 +1,6 @@
 {
   "name": "Meter Monitor",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "image": "ghcr.io/phiph-s/metermonitor-managementserver",
   "slug": "meter_monitor",
   "description": "Integrate ESP32 based meter monitor cams with Home Assistant using AI",
@@ -35,25 +35,25 @@
     "publish_to": "homeassistant/sensor/watermeter_{device}/"
   },
   "schema": {
-    "dbfile": "str",
-    "enable_auth": "bool",
-    "secret_key": "str",
     "max_history": "int(1,)",
     "max_evals": "int(1,)",
-    "allow_negative_correction": "bool",
-    "ingress": "bool",
-    "http": {
-      "enabled": "bool",
-      "host": "str",
-      "port": "port"
-    },
-    "publish_to": "str",
     "mqtt": {
       "broker": "str",
       "port": "port",
       "topic": "str",
       "username": "str",
       "password": "str"
-    }
+    },
+    "allow_negative_correction": "bool",
+    "ingress": "bool",
+    "enable_auth": "bool",
+    "secret_key": "str",
+    "http": {
+      "enabled": "bool",
+      "host": "str",
+      "port": "port"
+    },
+    "dbfile": "str",
+    "publish_to": "str"
   }
 }

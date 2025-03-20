@@ -57,7 +57,9 @@ def prepare_setup_app(config, lifespan):
     async def restrict_ip_middleware(request: Request, call_next):
         client_ip = request.client.host  # Get the requester's IP address
         if config["ingress"] and client_ip != "172.30.32.2": # Home Assistant IP for Ingress
-            raise HTTPException(status_code=403, detail="Forbidden")
+            # 403 Forbidden
+            request.state.response = Response(status_code=403)
+            return request.state.response
 
         return await call_next(request)
 
