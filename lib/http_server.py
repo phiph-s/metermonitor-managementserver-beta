@@ -36,7 +36,7 @@ def prepare_setup_app(config, lifespan):
     SECRET_KEY = config['secret_key']
     db_connection = lambda: sqlite3.connect(config['dbfile'])
 
-    if config['secret'] == "change_me" and config['enable_auth']:
+    if config['secret_key'] == "change_me" and config['enable_auth']:
         add_alert("authentication", "Please change the secret key in the configuration file!")
 
     meter_preditor = MeterPredictor(

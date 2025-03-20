@@ -13,16 +13,23 @@
 <script setup>
 import {NLayout, NLayoutContent, NSpace, useNotification} from 'naive-ui';
 import {onMounted, onUnmounted, ref} from "vue";
+import router from "@/router";
 
 const alerts = ref([]);
 
 const notification = useNotification();
 
 const updateAlerts = async () => {
-  alerts.value = await fetch(process.env.VUE_APP_HOST + 'api/alerts', {
+  const r = await fetch(process.env.VUE_APP_HOST + 'api/alerts', {
     headers: {secret: localStorage.getItem('secret')}
-  }).then(r => r.json());
+  })
 
+  if (r.status === 401) {
+    await router.push({path: '/unlock'});
+    return;
+  }
+
+  alerts.value = await r.json();
   notification.destroyAll();
   for (const alert of Object.keys(alerts.value)) {
     notification.create({
