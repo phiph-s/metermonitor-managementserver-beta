@@ -25,7 +25,7 @@
 4. **Start & Use**: Launch the add-on. Access the UI via Ingress.
 
 MQTT sensors are auto-discovered as long as the Mosquitto addon is used and auto discovery is enabled (default). No manual YAML needed.
-
+The docker container is beeing built for the architecture `amd64` and `aarch64` (arm), with `aarch64` being untetsted.
 ---
 
 ## 🖥️ Standalone Setup
@@ -45,6 +45,7 @@ Edit `settings.json` to configure MQTT and model paths.
 ### Docker
 
 ```bash
+git clone https://github.com/phiph-s/metermonitor-managementserver.git
 docker build -t metermonitor .
 docker run -d -p 8070:8070 -v ~/metermonitor-data:/data metermonitor
 ```
