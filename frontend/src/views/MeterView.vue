@@ -25,7 +25,9 @@
           />
         </template>
       </n-card>
-      <br />
+      <br>
+      <WifiStatus v-if="data" :rssi="data['WiFi-RSSI']" />
+      <br><br>
       <n-flex>
         <n-popconfirm @positive-click="resetToSetup">
           <template #trigger>
@@ -92,6 +94,7 @@ import router from '@/router';
 import ApexChart from 'vue3-apexcharts';
 import EvaluationResultList from "@/components/EvaluationResultList.vue";
 import {NFlex, NCard, NButton, NPopconfirm, NList, NListItem, NThing} from "naive-ui";
+import WifiStatus from "@/components/WifiStatus.vue";
 
 const route = useRoute();
 const id = route.params.id;
@@ -114,9 +117,11 @@ const decodedEvals = computed(() => {
   return evaluations.value ? evaluations.value.evals.map((encoded) => JSON.parse(encoded)).reverse() : [];
 });
 
+const host = import.meta.env.VITE_HOST;
+
 const loadMeter = async () => {
   loading.value = true;
-  let response = await fetch(process.env.VUE_APP_HOST + 'api/watermeters/' + id, {
+  let response = await fetch(host + 'api/watermeters/' + id, {
     headers: { secret: localStorage.getItem('secret') }
   });
   if (response.status === 401) {
@@ -124,17 +129,17 @@ const loadMeter = async () => {
   }
   data.value = await response.json();
 
-  response = await fetch(process.env.VUE_APP_HOST + 'api/watermeters/' + id + '/evals', {
+  response = await fetch(host + 'api/watermeters/' + id + '/evals', {
     headers: { secret: localStorage.getItem('secret') }
   });
   evaluations.value = await response.json();
 
-  response = await fetch(process.env.VUE_APP_HOST + 'api/watermeters/' + id + '/history', {
+  response = await fetch(host + 'api/watermeters/' + id + '/history', {
     headers: { secret: localStorage.getItem('secret') }
   });
   history.value = await response.json();
 
-  response = await fetch(process.env.VUE_APP_HOST + 'api/settings/' + id, {
+  response = await fetch(host + 'api/settings/' + id, {
     headers: { secret: localStorage.getItem('secret') }
   });
   let result = await response.json();
@@ -238,7 +243,7 @@ const optionsConf = {
 };
 
 const deleteMeter = async () => {
-  let response = await fetch(process.env.VUE_APP_HOST + 'api/watermeters/' + id, {
+  let response = await fetch(host + 'api/watermeters/' + id, {
     method: 'DELETE',
     headers: { secret: localStorage.getItem('secret') }
   });
@@ -250,7 +255,7 @@ const deleteMeter = async () => {
 };
 
 const resetToSetup = async () => {
-  let response = await fetch(process.env.VUE_APP_HOST + 'api/setup/' + id + '/enable', {
+  let response = await fetch(host + 'api/setup/' + id + '/enable', {
     method: 'POST',
     headers: { secret: localStorage.getItem('secret') }
   });

@@ -101,9 +101,11 @@ const refreshThresholds = async () => {
   refreshing.value = false;
 }
 
+const host = import.meta.env.VITE_HOST;
+
 async function thresholdImage(base64, threshold, islanding_padding = 0) {
   // use endpoint /api/evaluate/single
-  const response = await fetch(process.env.VUE_APP_HOST + 'api/evaluate/single', {
+  const response = await fetch(host + 'api/evaluate/single', {
     method: 'POST',
     headers: {
       'secret': `${localStorage.getItem('secret')}`,

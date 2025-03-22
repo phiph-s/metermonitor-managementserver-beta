@@ -96,7 +96,7 @@ def prepare_setup_app(config, lifespan):
     @app.get("/api/discovery", dependencies=[Depends(authenticate)])
     def get_discovery():
         cursor = db_connection().cursor()
-        cursor.execute("SELECT name, picture_timestamp FROM watermeters WHERE setup = 0")
+        cursor.execute("SELECT name, picture_timestamp, wifi_rssi FROM watermeters WHERE setup = 0")
         return {"watermeters": [row for row in cursor.fetchall()]}
 
     @app.post("/api/evaluate/single", dependencies=[Depends(authenticate)])
@@ -124,10 +124,16 @@ def prepare_setup_app(config, lifespan):
     def get_current_alerts():
         return get_alerts()
 
+    @app.get("/api/config", dependencies=[Depends(authenticate)])
+    def get_config():
+        tconfig = config.copy()
+        del tconfig['secret_key']
+        return tconfig
+
     @app.get("/api/watermeters", dependencies=[Depends(authenticate)])
     def get_watermeters():
         cursor = db_connection().cursor()
-        cursor.execute("SELECT name, picture_timestamp FROM watermeters WHERE setup = 1")
+        cursor.execute("SELECT name, picture_timestamp, wifi_rssi FROM watermeters WHERE setup = 1")
         return {"watermeters": [row for row in cursor.fetchall()]}
 
     @app.post("/api/setup/{name}/finish", dependencies=[Depends(authenticate)])
@@ -135,11 +141,14 @@ def prepare_setup_app(config, lifespan):
         db = db_connection()
         cursor = db.cursor()
         cursor.execute("UPDATE watermeters SET setup = 1 WHERE name = ?", (name,))
-        # clear evaluations
-        cursor.execute("DELETE FROM evaluations WHERE name = ?", (name,))
         db.commit()
         target_brightness, confidence = reevaluate_latest_picture(config['dbfile'], name, meter_preditor, config)
-        add_history_entry(config['dbfile'], name, data.value, confidence, target_brightness, data.timestamp, config, manual=True)
+        add_history_entry(config['dbfile'], name, data.value, 1, target_brightness, data.timestamp, config, manual=True)
+
+        # clear evaluations
+        cursor = db.cursor()
+        cursor.execute("DELETE FROM evaluations WHERE name = ?", (name,))
+        db.commit()
 
         return {"message": "Setup completed"}
 

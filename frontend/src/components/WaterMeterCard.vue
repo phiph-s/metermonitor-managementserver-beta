@@ -4,6 +4,9 @@
     <n-flex justify="space-between">
       <span>Last updated: {{ last_updated_locale }}</span>
     </n-flex>
+    <template #header-extra>
+      <WifiStatus :rssi="rssi" />
+    </template>
     <template #action>
       <n-flex justify="end">
         <router-link v-if="setup" :to="'/setup/'+meter_name"><n-button round>Setup</n-button></router-link>
@@ -16,11 +19,13 @@
 <script setup>
 import {NCard, NButton, NFlex} from 'naive-ui';
 import {defineProps} from 'vue';
+import WifiStatus from "@/components/WifiStatus.vue";
 
 const props = defineProps([
     'meter_name',
     'last_updated', // eg "2025-02-04T03:15:31"
-    'setup'
+    'setup',
+    'rssi'
 ]);
 
 const last_updated_locale = new Date(props.last_updated).toLocaleString();

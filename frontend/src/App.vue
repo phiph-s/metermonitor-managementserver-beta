@@ -18,9 +18,10 @@ import router from "@/router";
 const alerts = ref([]);
 
 const notification = useNotification();
+const host = import.meta.env.VITE_HOST;
 
 const updateAlerts = async () => {
-  const r = await fetch(process.env.VUE_APP_HOST + 'api/alerts', {
+  const r = await fetch(host + 'api/alerts', {
     headers: {secret: localStorage.getItem('secret')}
   })
 

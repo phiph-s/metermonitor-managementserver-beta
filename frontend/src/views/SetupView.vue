@@ -114,16 +114,19 @@ const last3DigitsNarrow = ref(false);
 const rotated180 = ref(false);
 const max_flow_rate = ref(1.0);
 
+const host = import.meta.env.VITE_HOST;
+
+
 const getData = async () => {
   loading.value = true;
-  let response = await fetch(process.env.VUE_APP_HOST + 'api/watermeters/' + id, {
+  let response = await fetch(host + 'api/watermeters/' + id, {
     headers: {
       'secret': `${localStorage.getItem('secret')}`
     }
   });
   lastPicture.value = await response.json();
 
-  response = await fetch(process.env.VUE_APP_HOST + 'api/watermeters/' + id + '/evals', {
+  response = await fetch(host + 'api/watermeters/' + id + '/evals', {
     headers: {
       'secret': `${localStorage.getItem('secret')}`
     }
@@ -133,7 +136,7 @@ const getData = async () => {
   }
   evaluations.value = await response.json();
 
-  response = await fetch(process.env.VUE_APP_HOST + 'api/settings/' + id, {
+  response = await fetch(host + 'api/settings/' + id, {
     headers: {
       'secret': `${localStorage.getItem('secret')}`
     }
@@ -178,7 +181,7 @@ const updateMaxFlow = (data) => {
 }
 
 const reevaluate = async () => {
-  await fetch(process.env.VUE_APP_HOST + 'api/reevaluate_latest/' + id, {
+  await fetch(host + 'api/reevaluate_latest/' + id, {
     method: 'GET',
     headers: {
       'secret': `${localStorage.getItem('secret')}`,
@@ -212,7 +215,7 @@ const updateSettings = async () => {
     max_flow_rate: max_flow_rate.value
   }
 
-  await fetch(process.env.VUE_APP_HOST + 'api/settings', {
+  await fetch(host + 'api/settings', {
     method: 'POST',
     headers: {
       'secret': `${localStorage.getItem('secret')}`,

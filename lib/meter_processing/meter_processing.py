@@ -253,7 +253,7 @@ class MeterPredictor:
         pairs = [(self.class_names[i], float(predictions[0][i])) for i in top3]
 
         # the second element of the pair is used to provide predictions from a second model for testing purposes
-        return pairs, []
+        return pairs, None
 
     def predict_digits(self, digits):
         """

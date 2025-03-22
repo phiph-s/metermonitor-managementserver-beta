@@ -67,6 +67,7 @@ const props = defineProps([
 const initialValue = ref(0);
 
 const dialog = useDialog();
+const host = import.meta.env.VITE_HOST;
 
 const finishSetup = async () => {
 
@@ -80,7 +81,7 @@ const finishSetup = async () => {
   }
 
   // post to /api/setup/{name}/finish
-  const r = await fetch(process.env.VUE_APP_HOST + 'api/setup/' + props.meterid + '/finish', {
+  const r = await fetch(host + 'api/setup/' + props.meterid + '/finish', {
     method: 'POST',
     headers: {
       'secret': `${localStorage.getItem('secret')}`,
