@@ -15,7 +15,9 @@ config = {}
 
 # parse settings.json or options.json
 # options.json is used in the addon, while settings.json is used in standalone mode
-# the addon will merge the options.json with the settings.json
+# the addon will merge the options.json with the contents of ha_default_settings.json
+
+# ha_default_settings.json contains settings that should not be changed by the user when running in Home Assistant
 
 path = '/data/options.json'
 if not os.path.exists(path):
