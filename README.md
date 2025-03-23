@@ -17,6 +17,9 @@
 
 ---
 
+This project is heavily inspired by [the AI-on-the-edge project](https://github.com/jomjol/AI-on-the-edge-device) and is trained on the dataset by the user [haverland](https://github.com/haverland/collectmeterdigits).
+
+
 ## 🏠 Home Assistant Setup (Recommended)
 
 1. **Add Repo**: Add `https://github.com/phiph-s/metermonitor-managementserver` as a repository in Home Assistant.
