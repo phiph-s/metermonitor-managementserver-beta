@@ -83,9 +83,5 @@ Put `options.json` in `~/metermonitor-data` (same format as `settings.json`).
 
 ---
 
-For more details, see the full documentation or PDF thesis.
-
----
-
-MIT License | Developed as Master Project @ Hochschule RheinMain
+Developed as Master Project @ Hochschule RheinMain
 
