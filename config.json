@@ -20,7 +20,8 @@
       "password": "esp"
     },
     "allow_negative_correction": true,
-    "publish_to": "homeassistant/sensor/watermeter_{device}/"
+    "publish_to": "homeassistant/sensor/watermeter_{device}/",
+    "dbfile": "/data/metermonitor.db"
   },
   "schema": {
     "max_history": "int(1,)",
@@ -33,6 +34,7 @@
       "password": "str"
     },
     "allow_negative_correction": "bool",
-    "publish_to": "str"
+    "publish_to": "str",
+    "dbfile": "str"
   }
 }
