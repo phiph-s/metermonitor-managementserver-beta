@@ -90,13 +90,6 @@ const getData = async () => {
 }
 
 onMounted(() => {
-  // check if secret is in local storage
-  const secret = localStorage.getItem('secret');
-  if (secret === null) {
-    console.log(router)
-    router.push({ path: '/unlock' });
-  }
-
   getData();
 });
 
