@@ -43,8 +43,8 @@
           <n-button
               @click="finishSetup"
               round
-              :disabled="loading || finishing"
-              :loading="loading || finishing"
+              :disabled="loading"
+              :loading="loading"
           >Finish & save</n-button>
         </n-flex>
       </template>
@@ -57,18 +57,18 @@ import {defineProps, ref, defineEmits} from 'vue';
 import {NFlex, NCard, NButton, NInputNumber, NDivider, useDialog} from 'naive-ui';
 import router from "@/router";
 
-const emit = defineEmits(['update']);
+const emit = defineEmits(['update', 'set-loading']);
 
 const props = defineProps([
     'meterid',
     'latestEval',
     'timestamp',
     'maxFlowRate',
-    'loading'
+    'loading',
+    'onSetLoading'
 ]);
 
 const initialValue = ref(0);
-const finishing = ref(false);
 
 const dialog = useDialog();
 const host = import.meta.env.VITE_HOST;
@@ -84,25 +84,37 @@ const finishSetup = async () => {
     return;
   }
 
-  finishing.value = true;
-  // post to /api/setup/{name}/finish
-  const r = await fetch(host + 'api/setup/' + props.meterid + '/finish', {
-    method: 'POST',
-    headers: {
-      'secret': `${localStorage.getItem('secret')}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      'value': initialValue.value,
-      'timestamp': props.timestamp
-    })
-  });
-  finishing.value = false;
+  // notify parent to show global loading
+  // prefer direct function prop, then emit, then global event
+  try { if (props.onSetLoading) props.onSetLoading(true); } catch (e) {}
+  emit('set-loading', true);
+  try { window.dispatchEvent(new CustomEvent('global-set-loading', { detail: true })); } catch (e) {}
+  try {
+    // post to /api/setup/{name}/finish
+    const r = await fetch(host + 'api/setup/' + props.meterid + '/finish', {
+      method: 'POST',
+      headers: {
+        'secret': `${localStorage.getItem('secret')}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        'value': initialValue.value,
+        'timestamp': props.timestamp
+      })
+    });
 
-  if (r.status === 200) {
-    router.push({ path: '/meter/' + props.meterid });
-  } else {
-    console.log('Error finishing setup');
+    if (r.status === 200) {
+      router.push({ path: '/meter/' + props.meterid });
+    } else {
+      console.log('Error finishing setup');
+    }
+  } catch (e) {
+    console.error('finishSetup failed', e);
+  } finally {
+    // ensure parent loading is turned off if we didn't navigate away
+    try { if (props.onSetLoading) props.onSetLoading(false); } catch (e) {}
+    emit('set-loading', false);
+    try { window.dispatchEvent(new CustomEvent('global-set-loading', { detail: false })); } catch (e) {}
   }
 
 }

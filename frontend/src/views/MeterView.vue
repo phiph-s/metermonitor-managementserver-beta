@@ -80,17 +80,18 @@
     <div style="padding-left: 20px; padding-right: 10px;">
       <EvaluationResultList :decodedEvals="decodedEvals" />
     </div>
-    <div style="overflow: hidden;">
-      <apex-chart class="bg" width="500" type="line" :series="series" :options="options" />
-      <apex-chart class="bg" width="500" type="line" :series="seriesConf" :options="optionsConf" />
-    </div>
-    <div style="width: 500px;">
-      <b>🛈 Correctional Algorithm</b><br><br>
+    <div style="max-width: 500px;">
+      <n-card size="small" style="overflow: hidden;">
+        <apex-chart width="468" height="200" type="line" :series="series" :options="options" />
+        <apex-chart width="468" height="200" type="line" :series="seriesConf" :options="optionsConf" />
+      </n-card>
+      <div style="margin-top: 30px; margin-bottom: 15px;">🛈 Correctional Algorithm</div>
       <n-collapse accordion>
         <n-collapse-item title="Per-digit greedy correction" name="1">
           <div>
             Keep flow rate positive: Choose the highest-confidence digit that keeps the reconstructed reading >= last reading prefix.
-            Corrected values will be marked in red.
+            Corrected values will be marked in red.<br><br>
+            <img src="@/assets/correction.png" alt="Correction example" style="max-width: 100%; border-radius: 15px;"/>
           </div>
         </n-collapse-item>
         <n-collapse-item title="Rotating digits  (↕)" name="2">
@@ -102,7 +103,8 @@
         <n-collapse-item title="Negative correction" name="3">
           <div>
             When negative corrections are enabled, the algorithm will accept a slightly lower reading if the previous value looked unreliable but the new prediction is confident.
-            After that, it relaxes the acceptance rules for subsequent digits so the full corrected reading can be reconstructed.
+            After that, it relaxes the acceptance rules for subsequent digits so the full corrected reading can be reconstructed.<br><br>
+            <img src="@/assets/negative_correction.png" alt="neg. correction example" style="max-width: 100%; border-radius: 15px;"/>
           </div>
         </n-collapse-item>
         <n-collapse-item title="Rejected results" name="4">

@@ -10,7 +10,7 @@
           <img class="digit" v-for="[i,base64] in tresholdedImages.slice(0,-3).entries()" :src="'data:image/png;base64,' + base64" :key="i+'b'" alt="Watermeter" style="height: 50px" />
         </n-flex>
         <br>
-        <n-slider v-model:value="nthreshold" range :step="1" :max="255" @mouseup="sendUpdate" style="max-width: 150px;"/>
+        <n-slider v-model:value="nthreshold" range :step="1" :max="255" @mouseup="sendUpdate" style="max-width: 150px;" :disabled="loading"/>
         {{threshold[0]}} - {{threshold[1]}}
       </div>
       <div>
@@ -22,18 +22,19 @@
           <img class="digit" v-for="[i,base64] in tresholdedImages.slice(-3).entries()" :src="'data:image/png;base64,' + base64" :key="i+'b'" alt="Watermeter" style="height: 50px"/>
         </n-flex>
         <br>
-        <n-slider v-model:value="nthreshold_last" range :step="1" :max="255" @mouseup="sendUpdate" style="max-width: 150px;"/>
+        <n-slider v-model:value="nthreshold_last" range :step="1" :max="255" @mouseup="sendUpdate" style="max-width: 150px;" :disabled="loading"/>
         {{threshold_last[0]}} - {{threshold_last[1]}}
       </div>
     </n-flex>
     <n-divider></n-divider>
     Extraction padding
-      <n-slider v-model:value="islanding_padding" :step="1" :max="100" @mouseup="sendUpdate" style="max-width: 150px;"/>
+      <n-slider v-model:value="islanding_padding" :step="1" :max="100" @mouseup="sendUpdate" style="max-width: 150px;" :disabled="loading"/>
     <template #action>
       <n-flex justify="end" size="large">
         <n-button
             @click="() => {emits('reevaluate');emits('next')}"
             round
+            :disabled="loading"
         >(Re)evaluate</n-button>
       </n-flex>
     </template>
@@ -49,6 +50,7 @@ const props = defineProps([
     'threshold',
     'threshold_last',
     'islanding_padding',
+    'loading'
 ]);
 
 const emits = defineEmits(['update', 'reevaluate', 'next']);
@@ -88,6 +90,7 @@ const sendUpdate = () => {
 
 const refreshThresholds = async () => {
   if (refreshing.value) return;
+  if (props.loading) return;
   refreshing.value = true;
 
   let narray = [];

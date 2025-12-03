@@ -45,6 +45,7 @@
             :threshold="threshold"
             :threshold_last="threshold_last"
             :islanding_padding="islanding_padding"
+            :loading="loading"
             @update="updateThresholds"
             @reevaluate="reevaluate"
             @next="() => nextStep(2)"
@@ -65,7 +66,7 @@
       style="max-width: 620px"
     >
       <div v-if="currentStep > 2">
-        <EvaluationConfigurator :latest-eval="evaluations.evals?evaluations.evals[evaluations.evals.length-1]:null" :max-flow-rate="max_flow_rate" :loading="loading" @update="updateMaxFlow" :meterid="id" :timestamp="lastPicture.picture.timestamp"/>
+        <EvaluationConfigurator :latest-eval="evaluations.evals?evaluations.evals[evaluations.evals.length-1]:null" :max-flow-rate="max_flow_rate" :loading="loading" @update="updateMaxFlow" @set-loading="setLoading" :on-set-loading="setLoading" :meterid="id" :timestamp="lastPicture.picture.timestamp"/>
          <br>
         <n-alert title="Info" type="info">
           <li>Check the values the model extracted</li>
@@ -79,7 +80,7 @@
 </template>
 
 <script setup>
-import {onMounted, ref} from 'vue';
+import {onMounted, ref, onUnmounted} from 'vue';
 import router from "@/router";
 import { NSteps, NStep, NButton, NAlert, NFlex, NH2 } from 'naive-ui';
 import { useRoute } from 'vue-router';
@@ -164,6 +165,19 @@ onMounted(() => {
   // check if secret is in local storage
   loading.value = true;
   getData();
+
+  // global event fallback
+  const _globalSetLoadingHandler = (e) => {
+    if (e && e.detail !== undefined) {
+      loading.value = !!e.detail;
+    }
+  };
+  window.addEventListener('global-set-loading', _globalSetLoadingHandler);
+});
+
+// cleanup on unmount
+onUnmounted(() => {
+  window.removeEventListener('global-set-loading', _globalSetLoadingHandler);
 });
 
 const updateThresholds = (data) => {
@@ -178,6 +192,11 @@ const updateMaxFlow = (data) => {
   console.log(data);
   max_flow_rate.value = data;
   updateSettings();
+}
+
+const setLoading = (v) => {
+  console.debug('SetupView setLoading ->', v);
+  loading.value = v;
 }
 
 const reevaluate = async () => {

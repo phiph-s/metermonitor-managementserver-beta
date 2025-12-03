@@ -1,7 +1,8 @@
 <template>
   <div style="height: calc(100vh - 200px); border-radius: 15px; overflow: scroll;" class="bglight">
-    <div v-if="decodedEvals.length == 0" style="padding: 20px; width: 430px;">
-      Waiting for the first images...
+    <div v-if="decodedEvals.length == 0" style="padding: 20px; width: 430px; margin-top: 20%;">
+      <n-empty description="Waiting for the first images...">
+      </n-empty>
     </div>
     <template v-if="decodedEvals && decodedEvals.length">
       <template v-for="[i, evalDecoded] in decodedEvals.entries()" :key="i">
@@ -132,7 +133,7 @@
 
 <script setup>
 import { defineProps } from 'vue';
-import {NFlex, NTooltip} from 'naive-ui';
+import {NFlex, NTooltip, NEmpty} from 'naive-ui';
 
 defineProps({
   decodedEvals: {
