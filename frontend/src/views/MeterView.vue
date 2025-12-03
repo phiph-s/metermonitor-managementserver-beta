@@ -84,6 +84,35 @@
       <apex-chart class="bg" width="500" type="line" :series="series" :options="options" />
       <apex-chart class="bg" width="500" type="line" :series="seriesConf" :options="optionsConf" />
     </div>
+    <div style="width: 500px;">
+      <b>🛈 Correctional Algorithm</b><br><br>
+      <n-collapse accordion>
+        <n-collapse-item title="Per-digit greedy correction" name="1">
+          <div>
+            Keep flow rate positive: Choose the highest-confidence digit that keeps the reconstructed reading >= last reading prefix.
+            Corrected values will be marked in red.
+          </div>
+        </n-collapse-item>
+        <n-collapse-item title="Rotating digits  (↕)" name="2">
+          <div>
+            When a rotation is detected for a digit, the last accepted value for that digit will be used (marked blue).
+            In case a higher order digit increased, the rotating digit will be set to 0.
+          </div>
+        </n-collapse-item>
+        <n-collapse-item title="Negative correction" name="3">
+          <div>
+            When negative corrections are enabled, the algorithm will accept a slightly lower reading if the previous value looked unreliable but the new prediction is confident.
+            After that, it relaxes the acceptance rules for subsequent digits so the full corrected reading can be reconstructed.
+          </div>
+        </n-collapse-item>
+        <n-collapse-item title="Rejected results" name="4">
+          <div>
+            When no valid reading can be reconstructed from the predicted digits or the flow rate exceeds the maximum allowed flow rate,
+            the entire evaluation is rejected.
+          </div>
+        </n-collapse-item>
+      </n-collapse>
+    </div>
   </n-flex>
 </template>
 
@@ -93,7 +122,7 @@ import { useRoute } from 'vue-router';
 import router from '@/router';
 import ApexChart from 'vue3-apexcharts';
 import EvaluationResultList from "@/components/EvaluationResultList.vue";
-import {NFlex, NCard, NButton, NPopconfirm, NList, NListItem, NThing} from "naive-ui";
+import {NFlex, NCard, NButton, NPopconfirm, NList, NListItem, NThing, NCollapse, NCollapseItem} from "naive-ui";
 import WifiStatus from "@/components/WifiStatus.vue";
 
 const route = useRoute();

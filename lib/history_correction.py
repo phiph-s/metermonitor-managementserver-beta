@@ -46,7 +46,7 @@ def correct_value(db_file:str, name: str, new_eval, allow_negative_correction = 
                 # replacement of the rotation class
                 if prediction[0] == 'r':
                     # check if the digit before has changed upwards, set the digit to 0
-                    if len(correctedValue) > 1 and correctedValue[-1] != last_value[i-1]:
+                    if i > 0 and int(correctedValue[-1]) > int(last_value[i-1]):
                         tempValue += '0'
                         tempConfidence *= prediction[1]
                     else:

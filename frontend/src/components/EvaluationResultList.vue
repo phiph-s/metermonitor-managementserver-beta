@@ -27,7 +27,7 @@
                     Rejected
                   </div>
                 </td>
-                <td v-for="base64 in evalDecoded[1]" :key="base64">
+                <td v-for="(base64, j) in evalDecoded[1]" :key="evalDecoded[3] + '-' + j">
                   <img class="digit" :src="'data:image/png;base64,' + base64" alt="Watermeter" />
                 </td>
               </tr>

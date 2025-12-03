@@ -43,8 +43,8 @@
           <n-button
               @click="finishSetup"
               round
-              :disabled="loading"
-              :loading="loading"
+              :disabled="loading || finishing"
+              :loading="loading || finishing"
           >Finish & save</n-button>
         </n-flex>
       </template>
@@ -68,6 +68,7 @@ const props = defineProps([
 ]);
 
 const initialValue = ref(0);
+const finishing = ref(false);
 
 const dialog = useDialog();
 const host = import.meta.env.VITE_HOST;
@@ -83,6 +84,7 @@ const finishSetup = async () => {
     return;
   }
 
+  finishing.value = true;
   // post to /api/setup/{name}/finish
   const r = await fetch(host + 'api/setup/' + props.meterid + '/finish', {
     method: 'POST',
@@ -95,12 +97,14 @@ const finishSetup = async () => {
       'timestamp': props.timestamp
     })
   });
+  finishing.value = false;
 
   if (r.status === 200) {
     router.push({ path: '/meter/' + props.meterid });
   } else {
     console.log('Error finishing setup');
   }
+
 }
 
 function getColor(value) {
