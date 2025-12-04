@@ -21,11 +21,12 @@ config = {}
 
 path = '/data/options.json'
 if not os.path.exists(path):
-    print("Running standalone, using settings.json")
+    print("[INIT] Running standalone, using settings.json")
     path = 'settings.json'
     with open(path, 'r') as f:
         config = json.load(f)
 else:
+    print("[INIT] Running as Home Assistant addon, using options.json and merging with ha_default_settings.json")
     #load options.json
     with open(path, 'r') as f:
         config = json.load(f)
@@ -37,7 +38,9 @@ else:
             if key not in config:
                 config[key] = settings[key]
 
-print("Config: ", config)
+print("[INIT] Loaded config:")
+# pretty print json
+print(json.dumps(config, indent=4))
 
 # create database and tables
 db_connection = sqlite3.connect(config['dbfile'])
@@ -109,8 +112,8 @@ if config['http']['enabled']:
         yield
 
     app = prepare_setup_app(config, lifespan)
-    print(f"Starting setup server on http://{config['http']['host']}:{config['http']['port']}")
     uvicorn.run(app, host=config['http']['host'], port=config['http']['port'], log_level="error")
+    print(f"[INIT] Started setup server on http://{config['http']['host']}:{config['http']['port']}")
 
 else:
     mqtt_handler = MQTTHandler(db_file=config['dbfile'], forever=True)

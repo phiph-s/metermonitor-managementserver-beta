@@ -42,7 +42,7 @@ class MeterPredictor:
             shrink_last_3 (bool): Whether to shrink the last 3 digits for better classification.
             target_brightness (float): The target brightness to adjust the image to.
         """
-
+        print(f"[Predictor] Running YOLO region-of-interest detection...")
         # run yolo detection
         results = self.model.predict(input_image, save=False, conf=0.15)
         obb_data = results[0].obb
@@ -53,14 +53,9 @@ class MeterPredictor:
                 obb_data.xyxyxyxy is None or
                 len(obb_data.xyxyxyxy) == 0
         ):
-            print(f"[INFO] No instances detected in the image.")
-            [],[]
+            print(f"[Predictor] No instances detected in the image.")
+            return [], [], None
 
-        # We'll use the first detected bounding box
-
-        if len(obb_data.xyxyxyxy) == 0:
-            print ("No bounding box found")
-            return [],[], None
 
         obb_coords = obb_data.xyxyxyxy[0].cpu().numpy()
         img = np.array(input_image)

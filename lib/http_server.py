@@ -33,7 +33,7 @@ def prepare_setup_app(config, lifespan):
     # create instance of meter predictor
     meter_preditor = MeterPredictor()
 
-    print("HTTP-Server: Loaded HTTP meter predictor.")
+    print("[HTTP] Successfully initialized the meter predictor.")
 
     # CORS Konfiguration
     app.add_middleware(
@@ -305,5 +305,5 @@ def prepare_setup_app(config, lifespan):
 
     app.mount("/assets", StaticFiles(directory="frontend/dist/assets"), name="assets")
 
-    print("HTTP-Server: Setup complete.")
+    print("[HTTP] Setup complete.")
     return app

@@ -53,14 +53,14 @@ def reevaluate_latest_picture(db_file: str, name:str, meter_preditor, config, pu
                                                                   extended_last_digit=extended_last_digit, rotated_180=rotated_180, target_brightness=target_brightness)
 
         if not result or len(result) == 0:
-            print(f"Meter-Eval: No result found for {name}")
+            print(f"[Eval ({name})] No result found")
             return None
 
         # Apply thresholds and extract the digits
         processed = []
         prediction = []
         if len(thresholds) == 0:
-            print(f"Meter-Eval: No thresholds found for {name}")
+            print(f"[Eval ({name})] No thresholds found for {name}")
         else:
             processed, digits = meter_preditor.apply_thresholds(digits, thresholds, thresholds_last, islanding_padding)
             prediction, second_model_results = meter_preditor.predict_digits(digits)
@@ -123,7 +123,7 @@ def reevaluate_latest_picture(db_file: str, name:str, meter_preditor, config, pu
 
         conn.commit()
 
-        print(f"Meter-Eval: Prediction saved for {name}")
+        print(f"[Eval ({name})] Prediction saved")
         return target_brightness, confidence
 
 # Function to publish the value to the MQTT broker, compatible with Home Assistant
@@ -134,7 +134,7 @@ def publish_value(mqtt_client, config, name, value):
         "value": int(value) / 1000.0,
     }
     mqtt_client.publish(topic, json.dumps(dict), qos=1, retain=True)
-    print(f"Meter-Eval: Value published for {name} ({value} m³)")
+    print(f"[Eval/MQTT ({name})] Value published ({value} m³)")
 
 # Function to publish the registration to the MQTT broker, compatible with Home Assistant
 def publish_registration(mqtt_client, config, name, type):
@@ -156,7 +156,7 @@ def publish_registration(mqtt_client, config, name, type):
       }
     }
     mqtt_client.publish(topic, json.dumps(dict), qos=1, retain=True)
-    print(f"Meter-Eval: Registration published for {name}")
+    print(f"[Eval/MQTT ({name})] HA compatible Registration published")
 
 # Function to add a history entry to the database, removing old entries
 def add_history_entry(db_file: str, name: str, value: int, confidence:int, target_brightness: float, timestamp: str, config, manual: bool = False):
@@ -188,4 +188,4 @@ def add_history_entry(db_file: str, name: str, value: int, confidence:int, targe
         ''', (name, name, config['max_history']))
 
         conn.commit()
-        print(f"Meter-Eval: History entry added for {name}")
+        print(f"[Eval ({name})] History entry added")

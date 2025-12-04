@@ -23,13 +23,14 @@ def correct_value(db_file:str, name: str, new_eval, allow_negative_correction = 
         new_time = datetime.fromisoformat(new_eval[3])
         new_results = new_eval[2]
 
+        if last_time >= new_time:
+            print(f"[CorrectionAlg ({name})] Time difference to last message is negative, assuming current time for correction")
+            new_time = datetime.now()
+
         max_flow_rate /= 60.0
         # get the time difference in minutes
         time_diff = (new_time - last_time).seconds / 60.0
-        if time_diff <= 0:
-            conn.commit()
-            print("Time difference is 0 or negative")
-            return None
+
 
         correctedValue = ""
         totalConfidence = 1.0
@@ -75,20 +76,20 @@ def correct_value(db_file:str, name: str, new_eval, allow_negative_correction = 
                             totalConfidence = tempConfidence
                             digit_appended = True
                             negative_corrected = True
-                            print("Negative correction accepted")
+                            print(f"[CorrectionAlg ({name})] Negative correction accepted")
                             break
 
             # if no digit was appended, append the original digit but reject the value
             if not digit_appended:
                 correctedValue += lastChar
                 reject = True
-                print("Fallback: appending original digit", lastChar)
+                print(f"[CorrectionAlg ({name})] Fallback: appending original digit", lastChar)
 
         # get the flow rate and check if it is within the limits
         flow_rate = (int(correctedValue) - int(last_value)) / 1000.0 / time_diff
         if flow_rate > max_flow_rate or (flow_rate < 0 and not allow_negative_correction) or reject:
-            print("Flow rate is too high or negative")
+            print(f"[CorrectionAlg ({name})] Flow rate is too high or negative")
             return None
         
-        print ("Value accepted for time", new_time, "flow rate", flow_rate, "value", correctedValue)
+        print (f"[CorrectionAlg ({name})] Value accepted for time", new_time, "flow rate", flow_rate, "value", correctedValue)
         return int(correctedValue), totalConfidence

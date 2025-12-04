@@ -1,3 +1,4 @@
+import datetime
 import time
 
 import paho.mqtt.client as mqtt
@@ -20,17 +21,17 @@ class MQTTHandler:
         self.forever = forever
         self.should_reconnect = True
         self.meter_preditor = MeterPredictor()
-        print("MQTT-Handler: Loaded MQTT meter predictor.")
+        print("[MQTT] Loaded MQTT meter predictor.")
 
     # On connect, remove the alert for the frontend
     # Also publish registration messages for all known watermeters
 
     def _on_connect(self, client, userdata, flags, reason_code, properties):
         if reason_code == 0:
-            print("Successfully connected to MQTT broker")
+            print("[MQTT] Successfully connected to MQTT broker")
             remove_alert("mqtt")
         else:
-            print(f"Connection failed with code {reason_code}")
+            print(f"[MQTT] Connection failed with code {reason_code}")
             add_alert("mqtt", "Failed to connect to MQTT broker")
             self._reconnect()
             return
@@ -61,13 +62,13 @@ class MQTTHandler:
 
         while self.should_reconnect:
             try:
-                print(f"Reconnecting to MQTT broker...")
+                print(f"[MQTT] Reconnecting to MQTT broker...")
                 self.client.reconnect()
                 print("Reconnected successfully")
                 remove_alert("mqtt")
                 return  # Exit loop on success
             except Exception as e:
-                print(f"Reconnect failed: {e}, retrying in {delay} seconds...")
+                print(f"[MQTT] Reconnect failed: {e}, retrying in {delay} seconds...")
                 time.sleep(delay)
                 delay = min(delay * 2, max_delay)  # Exponential backoff
 
@@ -104,8 +105,16 @@ class MQTTHandler:
     def _process_message(self, data: Dict[str, Any]):
         try:
             if not self._validate_message(data):
-                print("Invalid message format")
+                print(f"[MQTT] Invalid message format received at {datetime.datetime.now().isoformat()}: {data}")
                 return
+
+            print(f"[MQTT] Received message for watermeter {data['name']}")
+
+            # Check if timestamp is 0 or null, if so set it to current time
+            if not data['picture']['timestamp']or data['picture']['timestamp'] == "0":
+                # current iso time
+                data['picture']['timestamp'] = datetime.datetime.now().isoformat()
+                print(f"[MQTT] Timestamp was missing or zero, set to current time for {data['name']} ({data['picture']['timestamp']})")
 
             with sqlite3.connect(self.db_file) as conn:
                 cursor = conn.cursor()
@@ -170,10 +179,10 @@ class MQTTHandler:
                         data['name']
                     ))
                 conn.commit()
-                print(f"MQTT-Handler: Data saved for {data['name']}")
+                print(f"[MQTT] Saved/updated metadata of {data['name']} to database.")
             reevaluate_latest_picture(self.db_file, data['name'], self.meter_preditor, self.config, publish=True, mqtt_client=self.client)
         except Exception as e:
-            print(f"MQTT-Handler: Error processing message: {e}")
+            print(f"[MQTT] Error processing message: {e}")
             # print traceback
             traceback.print_exc()
 
@@ -197,7 +206,7 @@ class MQTTHandler:
         try:
             self.client.connect(broker, port)
         except Exception as e:
-            print(f"MQTT-Handler: Error connecting to MQTT broker: {e}")
+            print(f"[MQTT] Error connecting to MQTT broker: {e}")
             add_alert("mqtt", f"Failed to connect to MQTT broker: {e}")
             return
         self.client.subscribe(topic)
