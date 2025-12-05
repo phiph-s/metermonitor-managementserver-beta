@@ -39,7 +39,8 @@ const props = defineProps({
   colored: { type: Array, required: true },
   thresholded: { type: Array, required: true },
   name: { type: String, required: true },
-  setvalues: { type: Array, required: true }
+  setvalues: { type: Array, required: true },
+  onClose: { type: Function, default: null }
 })
 
 // build items array from props
@@ -121,6 +122,9 @@ async function upload() {
     } else {
       const j = await res.json()
       status.value = `Saved ${j.saved} images to ${j.output_root}`
+      if (props.onClose) {
+        setTimeout(() => props.onClose(), 500)
+      }
     }
   } catch (err) {
     status.value = `Upload error: ${err.message || err}`

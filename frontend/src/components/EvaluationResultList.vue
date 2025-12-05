@@ -171,9 +171,18 @@ const getColor = (value) => {
 
 const openUploadDialog = (colored, thresholded, name, values) => {
   const setvalues = values.map(sub => sub[0][0]);
-  dialog.info({
+  let dialogInstance;
+  dialogInstance = dialog.info({
     title: 'Upload Dataset',
-    content: () => h(DatasetUploader , { colored, thresholded, name, setvalues }),
+    content: () => h(DatasetUploader , {
+      colored,
+      thresholded,
+      name,
+      setvalues,
+      onClose: () => {
+        dialogInstance?.destroy();
+      }
+    }),
     closable: true,
     style: { width: '600px' }
   });
