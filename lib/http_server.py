@@ -1,7 +1,7 @@
 import os
 from io import BytesIO
 
-import cv2
+
 import numpy as np
 from PIL import Image
 from fastapi import FastAPI, HTTPException, Body, Header, Depends
@@ -9,6 +9,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import base64
 import sqlite3
+import zlib
+import re
+from typing import List
 
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse, FileResponse
@@ -94,11 +97,80 @@ def prepare_setup_app(config, lifespan):
         value: int
         timestamp: str
 
+    class DatasetUpload(BaseModel):
+        name: str
+        labels: List[str]
+        colored: List[str]
+        thresholded: List[str]
+
+    # Helper to sanitize meter name for filenames
+    def _sanitize_name(name: str) -> str:
+        # allow alnum, dash and underscore; replace others with _
+        return re.sub(r"[^A-Za-z0-9_-]", "_", name)
+
     @app.get("/api/discovery", dependencies=[Depends(authenticate)])
     def get_discovery():
         cursor = db_connection().cursor()
         cursor.execute("SELECT name, picture_timestamp, wifi_rssi FROM watermeters WHERE setup = 0")
         return {"watermeters": [row for row in cursor.fetchall()]}
+
+    @app.post("/api/dataset/upload", dependencies=[Depends(authenticate)])
+    def upload_dataset(payload: DatasetUpload):
+        # Validate equal lengths
+        n = len(payload.labels)
+        if not (len(payload.colored) == n == len(payload.thresholded)):
+            raise HTTPException(status_code=400, detail="'labels', 'colored' and 'thresholded' arrays must have equal length")
+
+        # allowed labels are 0-9 and 'r'
+        allowed = set([str(i) for i in range(10)] + ["r"])
+
+        out_root = config.get('output_dataset', '/data/output_dataset')
+        os.makedirs(out_root, exist_ok=True)
+
+        saved = 0
+        meter_name = _sanitize_name(payload.name)
+
+        for idx in range(n):
+            raw_label = payload.labels[idx]
+            label = str(raw_label)
+            if label not in allowed:
+                raise HTTPException(status_code=400, detail=f"Invalid label at index {idx}: {label}")
+
+            # ensure label folder exists
+            label_dir = os.path.join(out_root, label)
+            os.makedirs(label_dir, exist_ok=True)
+
+            # decode images
+            try:
+                col_bytes = base64.b64decode(payload.colored[idx])
+            except Exception:
+                raise HTTPException(status_code=400, detail=f"Invalid base64 in 'colored' at index {idx}")
+            try:
+                th_bytes = base64.b64decode(payload.thresholded[idx])
+            except Exception:
+                raise HTTPException(status_code=400, detail=f"Invalid base64 in 'thresholded' at index {idx}")
+
+            # compute crc32 of combined bytes for uniqueness
+            crc_input = col_bytes + th_bytes
+            crc = zlib.crc32(crc_input) & 0xFFFFFFFF
+            crc_hex = f"{crc:08x}"
+
+            filename = f"{label}_{meter_name}_{crc_hex}.png"
+            filepath_col = os.path.join(label_dir, filename)
+            filepath_th = os.path.join(label_dir, f"{label}_{meter_name}_{crc_hex}_th.png")
+
+            # write files
+            try:
+                with open(filepath_col, 'wb') as f:
+                    f.write(col_bytes)
+                with open(filepath_th, 'wb') as f:
+                    f.write(th_bytes)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to write files for index {idx}: {e}")
+
+            saved += 1
+
+        return {"saved": saved, "output_root": out_root}
 
     @app.post("/api/evaluate/single", dependencies=[Depends(authenticate)])
     def evaluate(
@@ -206,7 +278,7 @@ def prepare_setup_app(config, lifespan):
         cursor.execute(
             """
             INSERT INTO watermeters (name, picture_number, wifi_rssi, picture_format, 
-            picture_timestamp, picture_width, picture_height, picture_length, picture_data) 
+            picture_timestamp, picture_width, picture_height, picture_length, picture_data, setup) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
             """,
             (
@@ -221,7 +293,7 @@ def prepare_setup_app(config, lifespan):
                 config.picture.data
             )
         )
-        db_connection.commit()
+        db.commit()
         return {"message": "Watermeter configured", "name": config.name}
 
     @app.get("/api/settings/{name}", dependencies=[Depends(authenticate)])

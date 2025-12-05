@@ -78,7 +78,7 @@
       </n-card>
     </div>
     <div style="padding-left: 20px; padding-right: 10px;">
-      <EvaluationResultList :decodedEvals="decodedEvals" />
+      <EvaluationResultList :decodedEvals="decodedEvals" :name="id"/>
     </div>
     <div style="max-width: 500px;">
       <n-card size="small" style="overflow: hidden;">

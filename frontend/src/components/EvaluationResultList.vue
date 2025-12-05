@@ -13,6 +13,14 @@
                 <td>
                   {{ new Date(evalDecoded[3]).toLocaleString() }}
                 </td>
+                <td>
+                  <n-button
+                    size="small"
+                    @click="openUploadDialog(evalDecoded[0], evalDecoded[1], name)"
+                  >
+                    Upload Dataset
+                  </n-button>
+                </td>
               </tr>
               <tr>
                 <td style="vertical-align: top;">
@@ -132,13 +140,20 @@
 </template>
 
 <script setup>
-import { defineProps } from 'vue';
-import {NFlex, NTooltip, NEmpty} from 'naive-ui';
+import { defineProps, h } from 'vue';
+import {NFlex, NTooltip, NEmpty, useDialog} from 'naive-ui';
+import DatasetUploader from "@/components/DatasetUploader.vue";
+
+const dialog = useDialog();
 
 defineProps({
   decodedEvals: {
     type: Array,
     default: () => []
+  },
+  name: {
+    type: String,
+    default: ''
   }
 });
 
@@ -147,6 +162,15 @@ const getColor = (value) => {
   value = Math.max(0, Math.min(1, value));
   const hue = value * 120;
   return `hsl(${hue}, 100%, 40%)`;
+};
+
+const openUploadDialog = (colored, thresholded, name) => {
+  dialog.info({
+    title: 'Upload Dataset',
+    content: () => h(DatasetUploader , { colored, thresholded, name }),
+    closable: true,
+    style: { width: '600px' }
+  });
 };
 </script>
 

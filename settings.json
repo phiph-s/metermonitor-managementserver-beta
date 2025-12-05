@@ -2,7 +2,7 @@
     "max_history": 200,
     "max_evals": 30,
     "mqtt": {
-      "broker": "192.168.178.24",
+      "broker": "192.168.178.33",
       "port": 1883,
       "topic": "MeterMonitor/#",
       "username": "esp",
@@ -18,5 +18,6 @@
       "port": 8070
     },
     "dbfile": "data/watermeters.sqlite",
+    "output_dataset": "data/output_dataset",
     "publish_to": "homeassistant/sensor/watermeter_{device}/"
   }
