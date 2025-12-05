@@ -1,5 +1,7 @@
 import os
 from io import BytesIO
+import shutil
+import tempfile
 
 
 import numpy as np
@@ -14,7 +16,7 @@ import re
 from typing import List
 
 from starlette.middleware.cors import CORSMiddleware
-from starlette.responses import JSONResponse, FileResponse
+from starlette.responses import JSONResponse, FileResponse, StreamingResponse
 
 from lib.functions import reevaluate_latest_picture, add_history_entry
 from lib.meter_processing.meter_processing import MeterPredictor
@@ -176,6 +178,59 @@ def prepare_setup_app(config, lifespan):
             saved += 1
 
         return {"saved": saved, "output_root": out_root}
+
+    @app.get("/api/dataset/{name}/download", dependencies=[Depends(authenticate)])
+    def download_dataset(name: str):
+        out_root = config.get('output_dataset', '/data/output_dataset')
+        meter_name = _sanitize_name(name)
+        meter_root = os.path.join(out_root, meter_name)
+
+        if not os.path.isdir(meter_root):
+            raise HTTPException(status_code=404, detail="Dataset not found")
+
+        # Create a temporary zip file
+        temp_dir = tempfile.mkdtemp()
+        zip_path = os.path.join(temp_dir, f"{meter_name}_dataset.zip")
+
+        try:
+            # Create zip archive
+            shutil.make_archive(zip_path.replace('.zip', ''), 'zip', meter_root)
+
+            # Read the zip file
+            with open(zip_path, 'rb') as f:
+                zip_data = f.read()
+
+            # Clean up temp directory
+            shutil.rmtree(temp_dir)
+
+            # Return as streaming response
+            return StreamingResponse(
+                BytesIO(zip_data),
+                media_type="application/zip",
+                headers={
+                    "Content-Disposition": f"attachment; filename={meter_name}_dataset.zip"
+                }
+            )
+        except Exception as e:
+            # Clean up on error
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
+            raise HTTPException(status_code=500, detail=f"Failed to create zip: {str(e)}")
+
+    @app.delete("/api/dataset/{name}", dependencies=[Depends(authenticate)])
+    def delete_dataset(name: str):
+        out_root = config.get('output_dataset', '/data/output_dataset')
+        meter_name = _sanitize_name(name)
+        meter_root = os.path.join(out_root, meter_name)
+
+        if not os.path.isdir(meter_root):
+            raise HTTPException(status_code=404, detail="Dataset not found")
+
+        try:
+            shutil.rmtree(meter_root)
+            return {"message": "Dataset deleted", "name": name}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to delete dataset: {str(e)}")
 
     @app.post("/api/evaluate/single", dependencies=[Depends(authenticate)])
     def evaluate(

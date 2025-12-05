@@ -84,11 +84,11 @@
               Dataset
             </b>
 
-            <n-button type="primary" ghost round >
+            <n-button type="primary" ghost round :loading="downloadingDataset" @click="downloadDataset">
               Download
             </n-button>
 
-            <n-popconfirm @positive-click="deleteMeter">
+            <n-popconfirm @positive-click="deleteDataset">
               <template #trigger>
                 <n-button type="error" ghost circle>
                   <template #icon>
@@ -162,6 +162,7 @@ const loading = ref(false);
 const data = ref(null);
 const evaluations = ref(null);
 const history = ref(null);
+const downloadingDataset = ref(false);
 
 const threshold = ref([0, 0]);
 const threshold_last = ref([0, 0]);
@@ -322,6 +323,51 @@ const resetToSetup = async () => {
     router.replace({ path: '/setup/' + id });
   } else {
     console.log('Error resetting meter');
+  }
+};
+
+const downloadDataset = async () => {
+  downloadingDataset.value = true;
+  try {
+    const response = await fetch(host + 'api/dataset/' + id + '/download', {
+      headers: { secret: localStorage.getItem('secret') }
+    });
+
+    if (response.status === 200) {
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${id}_dataset.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } else {
+      console.log('Error downloading dataset');
+    }
+  } catch (err) {
+    console.log('Error downloading dataset:', err);
+  } finally {
+    downloadingDataset.value = false;
+  }
+};
+
+const deleteDataset = async () => {
+  try {
+    const response = await fetch(host + 'api/dataset/' + id, {
+      method: 'DELETE',
+      headers: { secret: localStorage.getItem('secret') }
+    });
+
+    if (response.status === 200) {
+      // Reload meter data to update dataset_present status
+      await loadMeter();
+    } else {
+      console.log('Error deleting dataset');
+    }
+  } catch (err) {
+    console.log('Error deleting dataset:', err);
   }
 };
 </script>
