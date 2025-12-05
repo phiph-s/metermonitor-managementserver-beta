@@ -110,7 +110,7 @@ async function upload() {
     const headers = { 'Content-Type': 'application/json' }
     if (localStorage.getItem('secret')) headers['secret'] = localStorage.getItem('secret')
 
-    const res = await fetch('/api/dataset/upload', {
+    const res = await fetch('api/dataset/upload', {
       method: 'POST',
       headers,
       body: JSON.stringify(payload)
