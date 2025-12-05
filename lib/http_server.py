@@ -125,10 +125,13 @@ def prepare_setup_app(config, lifespan):
         allowed = set([str(i) for i in range(10)] + ["r"])
 
         out_root = config.get('output_dataset', '/data/output_dataset')
+        # Ensure root exists and create a per-meter root folder
         os.makedirs(out_root, exist_ok=True)
 
         saved = 0
         meter_name = _sanitize_name(payload.name)
+        meter_root = os.path.join(out_root, meter_name)
+        os.makedirs(meter_root, exist_ok=True)
 
         for idx in range(n):
             raw_label = payload.labels[idx]
@@ -136,9 +139,9 @@ def prepare_setup_app(config, lifespan):
             if label not in allowed:
                 raise HTTPException(status_code=400, detail=f"Invalid label at index {idx}: {label}")
 
-            # ensure color and th label folders exist
-            color_label_dir = os.path.join(out_root, 'color', label)
-            th_label_dir = os.path.join(out_root, 'th', label)
+            # ensure per-meter color and th label folders exist
+            color_label_dir = os.path.join(meter_root, 'color', label)
+            th_label_dir = os.path.join(meter_root, 'th', label)
             os.makedirs(color_label_dir, exist_ok=True)
             os.makedirs(th_label_dir, exist_ok=True)
 
@@ -153,7 +156,7 @@ def prepare_setup_app(config, lifespan):
                 raise HTTPException(status_code=400, detail=f"Invalid base64 in 'thresholded' at index {idx}")
 
             # compute crc32 of combined bytes for uniqueness
-            crc_input = col_bytes + th_bytes
+            crc_input = bytes(col_bytes) + bytes(th_bytes)
             crc = zlib.crc32(crc_input) & 0xFFFFFFFF
             crc_hex = f"{crc:08x}"
 
@@ -248,6 +251,16 @@ def prepare_setup_app(config, lifespan):
         row = cursor.fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Watermeter not found")
+        # check for dataset presence under configured output root for this meter
+        out_root = config.get('output_dataset', '/data/output_dataset')
+        meter_root = os.path.join(out_root, _sanitize_name(name))
+        dataset_present = False
+        if os.path.isdir(meter_root):
+            for _dirpath, _dirnames, files in os.walk(meter_root):
+                if any(f.lower().endswith('.png') for f in files):
+                    dataset_present = True
+                    break
+
         return {
             "name": row[0],
             "picture_number": row[1],
@@ -259,7 +272,8 @@ def prepare_setup_app(config, lifespan):
                 "height": row[6],
                 "length": row[7],
                 "data": row[8]
-            }
+            },
+            "dataset_present": dataset_present
         }
 
     @app.delete("/api/watermeters/{name}", dependencies=[Depends(authenticate)])

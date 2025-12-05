@@ -36,7 +36,7 @@
                     size="small"
                     quaternary
                     circle
-                    @click="openUploadDialog(evalDecoded[0], evalDecoded[1], name)"
+                    @click="openUploadDialog(evalDecoded[0], evalDecoded[1], name, evalDecoded[2])"
                   >
                     <template #icon>
                       <n-icon><ArchiveOutlined /></n-icon>
@@ -169,10 +169,11 @@ const getColor = (value) => {
   return `hsl(${hue}, 100%, 40%)`;
 };
 
-const openUploadDialog = (colored, thresholded, name) => {
+const openUploadDialog = (colored, thresholded, name, values) => {
+  const setvalues = values.map(sub => sub[0][0]);
   dialog.info({
     title: 'Upload Dataset',
-    content: () => h(DatasetUploader , { colored, thresholded, name }),
+    content: () => h(DatasetUploader , { colored, thresholded, name, setvalues }),
     closable: true,
     style: { width: '600px' }
   });

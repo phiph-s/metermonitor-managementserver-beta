@@ -39,6 +39,7 @@ const props = defineProps({
   colored: { type: Array, required: true },
   thresholded: { type: Array, required: true },
   name: { type: String, required: true },
+  setvalues: { type: Array, required: true }
 })
 
 // build items array from props
@@ -52,10 +53,14 @@ const items = computed(() => {
 })
 
 // default selection is 'skip' (do not send)
-const selections = ref(Array(items.value.length).fill('skip'))
+const selections = ref( props.setvalues && props.setvalues.length === items.value.length
+  ? props.setvalues.slice()
+  : Array(items.value.length).fill('skip')
+)
 
 // keep selections length in sync when items change
 watchEffect(() => {
+  console.log(props.setvalues)
   if (selections.value.length < items.value.length) {
     selections.value = selections.value.concat(Array(items.value.length - selections.value.length).fill('skip'))
   } else if (selections.value.length > items.value.length) {
