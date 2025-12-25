@@ -33,8 +33,7 @@ def reevaluate_digits(db_file: str, name: str, meter_preditor, config, offset: i
             return {"error": "No evaluations found"}
 
         # parse the eval (json)
-        eval = json.loads(row[0])
-        raw_images = eval[0]
+        raw_images = json.loads(row[0])
         print (f"[ExampleSet ({name})] Found example set, {len(raw_images)} images")
 
         # convert to np arrays (from base64)
