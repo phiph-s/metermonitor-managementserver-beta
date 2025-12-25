@@ -93,6 +93,18 @@ def prepare_setup_app(config, lifespan):
         extended_last_digit: bool
         max_flow_rate: float
 
+    class SettingsUpdateRequest(BaseModel):
+        threshold_low: int
+        threshold_high: int
+        threshold_last_low: int
+        threshold_last_high: int
+        islanding_padding: int
+        segments: int
+        rotated_180: bool
+        shrink_last_3: bool
+        extended_last_digit: bool
+        max_flow_rate: float
+
     class EvalRequest(BaseModel):
         eval: str
 
@@ -369,6 +381,7 @@ def prepare_setup_app(config, lifespan):
         return {"message": "Watermeter configured", "name": config.name}
 
     @app.get("/api/settings/{name}", dependencies=[Depends(authenticate)])
+    @app.get("/api/watermeters/{name}/settings", dependencies=[Depends(authenticate)])
     def get_settings(name: str):
         cursor = db_connection().cursor()
         cursor.execute("SELECT threshold_low, threshold_high, threshold_last_low, threshold_last_high, islanding_padding, segments, shrink_last_3, extended_last_digit, max_flow_rate, rotated_180 FROM settings WHERE name = ?", (name,))
@@ -406,7 +419,25 @@ def prepare_setup_app(config, lifespan):
         db.commit()
         return {"message": "Thresholds set", "name": settings.name}
 
-    @app.get("/api/reevaluate_latest/{name}", dependencies=[Depends(authenticate)])
+    @app.put("/api/watermeters/{name}/settings", dependencies=[Depends(authenticate)])
+    def update_settings(name: str, settings: SettingsUpdateRequest):
+        db = db_connection()
+        cursor = db.cursor()
+        cursor.execute(
+            """
+            INSERT INTO settings (name, threshold_low, threshold_high, threshold_last_low, threshold_last_high, islanding_padding, segments, shrink_last_3, extended_last_digit, max_flow_rate, rotated_180) 
+            VALUES (?, ?, ?, ?,?,?, ?, ? , ?, ?, ?) ON CONFLICT(name) DO UPDATE SET 
+            threshold_low=excluded.threshold_low, threshold_high=excluded.threshold_high, threshold_last_low=excluded.threshold_last_low, threshold_last_high=excluded.threshold_last_high,
+            islanding_padding=excluded.islanding_padding,
+            segments=excluded.segments, shrink_last_3=excluded.shrink_last_3, extended_last_digit=excluded.extended_last_digit, max_flow_rate=excluded.max_flow_rate, rotated_180=excluded.rotated_180
+            """,
+            (name, settings.threshold_low, settings.threshold_high, settings.threshold_last_low, settings.threshold_last_high, settings.islanding_padding,
+             settings.segments, settings.shrink_last_3, settings.extended_last_digit, settings.max_flow_rate, settings.rotated_180)
+        )
+        db.commit()
+        return {"message": "Settings updated", "name": name}
+
+    @app.post("/api/watermeters/{name}/evaluations/reevaluate", dependencies=[Depends(authenticate)])
     def reevaluate_latest(name: str):
         try:
             return {
@@ -415,10 +446,12 @@ def prepare_setup_app(config, lifespan):
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Re-evaluation failed: {str(e)}")
 
-    @app.get("/api/get_reevaluated_digits/{name}", dependencies=[Depends(authenticate)])
-    def get_reevaluated_digits(name: str):
+    @app.post("/api/watermeters/{name}/evaluations/sample", dependencies=[Depends(authenticate)])
+    @app.post("/api/watermeters/{name}/evaluations/sample/{offset}", dependencies=[Depends(authenticate)])
+    def get_reevaluated_digits(name: str, offset: int = None):
         # returns a set of random digits from historic evaluations for the given watermeter, evaluated with the current settings
-        return reevaluate_digits(config['dbfile'], name, meter_preditor, config)
+        # if offset is provided, returns the evaluation at that offset from the latest (0 = latest, 1 = second latest, etc.)
+        return reevaluate_digits(config['dbfile'], name, meter_preditor, config, offset)
 
     # GET endpoint for retrieving evaluations
     @app.get("/api/watermeters/{name}/evals", dependencies=[Depends(authenticate)])

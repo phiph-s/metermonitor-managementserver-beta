@@ -58,13 +58,13 @@ export const useSetupStore = defineStore('setup', () => {
   const reevaluate = async (meterId) => {
     loading.value = true;
     try {
-      const response = await apiService.get(`api/reevaluate_latest/${meterId}`);
+      const response = await apiService.post(`api/watermeters/${meterId}/evaluations/reevaluate`);
 
       if (response.ok) {
         const result = await response.json();
 
         if (result.error) {
-          console.error('get_reevaluated_digits error', result.error);
+          console.error('reevaluate error', result.error);
           return;
         }
 
@@ -80,10 +80,13 @@ export const useSetupStore = defineStore('setup', () => {
     }
   };
 
-  const requestReevaluatedDigits = async (meterId) => {
+  const requestReevaluatedDigits = async (meterId, offset = null) => {
     loading.value = true;
     try {
-      const response = await apiService.get(`api/get_reevaluated_digits/${meterId}`);
+      const url = offset !== null
+        ? `api/watermeters/${meterId}/evaluations/sample/${offset}`
+        : `api/watermeters/${meterId}/evaluations/sample`;
+      const response = await apiService.post(url);
       if (response.ok) {
         const result = await response.json();
 

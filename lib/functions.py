@@ -8,17 +8,25 @@ import numpy as np
 
 from lib.history_correction import correct_value
 
-def reevaluate_digits(db_file: str, name: str, meter_preditor, config):
+def reevaluate_digits(db_file: str, name: str, meter_preditor, config, offset: int = None):
     with sqlite3.connect(db_file) as conn:
         cursor = conn.cursor()
 
-        # Get a random eval from the database
-        cursor.execute('''
-            SELECT colored_digits FROM evaluations
-            WHERE name = ?
-            ORDER BY RANDOM()
-            LIMIT 1
-        ''', (name,))
+        # Get eval from the database - either by offset or last
+        if offset is not None:
+            cursor.execute('''
+                SELECT colored_digits FROM evaluations
+                WHERE name = ?
+                ORDER BY id DESC
+                LIMIT 1 OFFSET ?
+            ''', (name, offset))
+        else:
+            cursor.execute('''
+                SELECT colored_digits FROM evaluations
+                WHERE name = ?
+                ORDER BY id DESC
+                LIMIT 1
+            ''', (name,))
         row = cursor.fetchone()
         if not row:
             print(f"[ExampleSet ({name})] No evaluations found for {name}")

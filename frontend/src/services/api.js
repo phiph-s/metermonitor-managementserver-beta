@@ -40,6 +40,22 @@ class ApiService {
     });
   }
 
+  async put(url, data) {
+    const authStore = useAuthStore();
+    return this.request(url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'secret': authStore.secret,
+      },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async delete(url) {
+    return this.request(url, { method: 'DELETE' });
+  }
+
   async getJson(url) {
     const response = await this.get(url);
     if (response.ok) {

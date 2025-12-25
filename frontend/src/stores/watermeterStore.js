@@ -80,8 +80,8 @@ export const useWatermeterStore = defineStore('watermeter', () => {
   };
 
   const fetchSettings = async (meterId) => {
-    const data = await apiService.getJson(`api/settings/${meterId}`);
-    
+    const data = await apiService.getJson(`api/watermeters/${meterId}/settings`);
+
     // Update settings state
     settings.value = {
       threshold_low: data.threshold_low,
@@ -101,7 +101,6 @@ export const useWatermeterStore = defineStore('watermeter', () => {
 
   const updateSettings = async (meterId) => {
     const payload = {
-      name: meterId,
       threshold_low: settings.value.threshold_low,
       threshold_high: settings.value.threshold_high,
       threshold_last_low: settings.value.threshold_last_low,
@@ -114,7 +113,7 @@ export const useWatermeterStore = defineStore('watermeter', () => {
       max_flow_rate: settings.value.max_flow_rate,
     };
 
-    await apiService.post('api/settings', payload);
+    await apiService.put(`api/watermeters/${meterId}/settings`, payload);
   };
 
   const fetchAll = async (meterId) => {
