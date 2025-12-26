@@ -116,6 +116,8 @@ class MQTTHandler:
                 data['picture']['timestamp'] = datetime.datetime.now().isoformat()
                 print(f"[MQTT] Timestamp was missing or zero, set to current time for {data['name']} ({data['picture']['timestamp']})")
 
+            _, _, boundingboxed_image = reevaluate_latest_picture(self.db_file, data['name'], self.meter_preditor, self.config, publish=True, mqtt_client=self.client)
+
             with sqlite3.connect(self.db_file) as conn:
                 cursor = conn.cursor()
                 #check if watermeter exists
@@ -133,7 +135,7 @@ class MQTTHandler:
                         data['picture']['width'],
                         data['picture']['height'],
                         data['picture']['length'],
-                        data['picture']['data'],
+                        boundingboxed_image,
                         0
                     ))
                     cursor.execute('''
@@ -175,12 +177,11 @@ class MQTTHandler:
                         data['picture']['width'],
                         data['picture']['height'],
                         data['picture']['length'],
-                        data['picture']['data'],
+                        boundingboxed_image,
                         data['name']
                     ))
                 conn.commit()
                 print(f"[MQTT] Saved/updated metadata of {data['name']} to database.")
-            reevaluate_latest_picture(self.db_file, data['name'], self.meter_preditor, self.config, publish=True, mqtt_client=self.client)
         except Exception as e:
             print(f"[MQTT] Error processing message: {e}")
             # print traceback

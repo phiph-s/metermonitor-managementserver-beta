@@ -124,7 +124,7 @@ def reevaluate_latest_picture(db_file: str, name:str, meter_preditor, config, pu
         image = Image.open(BytesIO(image_data))
 
         # Use the meter predictor to extract the digits from the image
-        result, digits, target_brightness = meter_preditor.extract_display_and_segment(image, segments=segments, shrink_last_3=shrink_last_3,
+        result, digits, target_brightness, boundingboxed_image = meter_preditor.extract_display_and_segment(image, segments=segments, shrink_last_3=shrink_last_3,
                                                                   extended_last_digit=extended_last_digit, rotated_180=rotated_180, target_brightness=target_brightness)
 
         if not result or len(result) == 0:
@@ -243,7 +243,7 @@ def reevaluate_latest_picture(db_file: str, name:str, meter_preditor, config, pu
         conn.commit()
 
         print(f"[Eval ({name})] Prediction saved")
-        return target_brightness, confidence
+        return target_brightness, confidence, boundingboxed_image
 
 # Function to publish the value to the MQTT broker, compatible with Home Assistant
 def publish_value(mqtt_client, config, name, value):

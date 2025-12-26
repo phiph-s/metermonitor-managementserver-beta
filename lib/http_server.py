@@ -288,7 +288,7 @@ def prepare_setup_app(config, lifespan):
         cursor = db.cursor()
         cursor.execute("UPDATE watermeters SET setup = 1 WHERE name = ?", (name,))
         db.commit()
-        target_brightness, confidence = reevaluate_latest_picture(config['dbfile'], name, meter_preditor, config, skip_setup_overwriting=False)
+        target_brightness, confidence, _ = reevaluate_latest_picture(config['dbfile'], name, meter_preditor, config, skip_setup_overwriting=False)
         add_history_entry(config['dbfile'], name, data.value, 1, target_brightness, data.timestamp, config, manual=True)
 
         # clear evaluations

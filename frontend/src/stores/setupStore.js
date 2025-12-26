@@ -98,7 +98,6 @@ export const useSetupStore = defineStore('setup', () => {
     // Clear existing examples and reset cancellation flag
     randomExamples.value = [];
     loadingCancelled.value = false;
-    loading.value = true;
 
     try {
       // Load samples with increasing offset (0 to amount-1)
@@ -133,8 +132,6 @@ export const useSetupStore = defineStore('setup', () => {
       }
     } catch (e) {
       console.error('get_reevaluated_digits failed', e);
-    } finally {
-      loading.value = false;
     }
   };
 

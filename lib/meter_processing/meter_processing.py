@@ -163,7 +163,21 @@ class MeterPredictor:
 
             base64s.append(img_str)
 
-        return base64s, digits, target_brightness
+        # export base64 with the input_image + the inserted bounding box for debugging
+        img_with_bbox = np.array(input_image)
+        boundingboxed_image = None
+        if obb_coords is not None:
+            obb_points = obb_coords.reshape(4, 2).astype(np.int32)
+            cv2.polylines(img_with_bbox, [obb_points], isClosed=True, color=(255, 0, 0), thickness=2)
+
+            pil_img = Image.fromarray(img_with_bbox)
+            buffered = BytesIO()
+            pil_img.save(buffered, format="PNG")
+            img_str = base64.b64encode(buffered.getvalue())
+            # to string
+            boundingboxed_image = img_str.decode('utf-8')
+
+        return base64s, digits, target_brightness, boundingboxed_image
 
     def apply_threshold(self, digit, threshold_low, threshold_high, islanding_padding=40):
         threshold_low, threshold_high = int(threshold_low), int(threshold_high)
