@@ -1,7 +1,7 @@
 <template>
   <n-card>
     <template #cover>
-      <img v-if="lastPicture" :src="'data:image/'+lastPicture.picture.format+';base64,' + lastPicture.picture.data_bbox" alt="Watermeter" :class="{rotated: rotated180}" />
+      <img v-if="lastPicture" :src="'data:image/'+lastPicture.picture.format+';base64,' + lastPicture.picture.data_bbox" alt="Watermeter" />
     </template>
     <br>
 

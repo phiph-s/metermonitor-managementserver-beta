@@ -441,9 +441,18 @@ def prepare_setup_app(config, lifespan):
     @app.post("/api/watermeters/{name}/evaluations/reevaluate", dependencies=[Depends(authenticate)])
     def reevaluate_latest(name: str):
         try:
-            return {
-                "result": (reevaluate_latest_picture(config['dbfile'], name, meter_preditor, config, skip_setup_overwriting=False) != None)
-            }
+            r = reevaluate_latest_picture(config['dbfile'], name, meter_preditor, config, skip_setup_overwriting=False)
+            if r is None: return {"result": False}
+            _, _, bbox_base64 = r
+
+            # update in watermeters table
+            db = db_connection()
+            cursor = db.cursor()
+            cursor.execute("UPDATE watermeters SET picture_data_bbox = ? WHERE name = ?", (bbox_base64, name))
+            db.commit()
+            print(f"[HTTP] Re-evaluated latest picture for watermeter {name}")
+            return {"result": True}
+
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Re-evaluation failed: {str(e)}")
 

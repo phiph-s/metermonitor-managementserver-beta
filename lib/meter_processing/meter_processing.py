@@ -42,6 +42,12 @@ class MeterPredictor:
             shrink_last_3 (bool): Whether to shrink the last 3 digits for better classification.
             target_brightness (float): The target brightness to adjust the image to.
         """
+
+        # Rotate the image 180 degrees
+        if rotated_180:
+            #  is image.py
+            input_image = input_image.rotate(180, expand=True)
+
         print(f"[Predictor] Running YOLO region-of-interest detection...")
         # run yolo detection
         results = self.model.predict(input_image, save=False, conf=0.15)
@@ -104,12 +110,6 @@ class MeterPredictor:
         # Cut out a larger area for the last digit
         if extended_last_digit:
             rotated_cropped_img_ext = cv2.warpPerspective(img, M, (max_width, int(max_height * 1.2)))
-
-        # Rotate the image 180 degrees if needed
-        if rotated_180:
-            rotated_cropped_img = cv2.rotate(rotated_cropped_img, cv2.ROTATE_180)
-            if extended_last_digit:
-                rotated_cropped_img_ext = cv2.rotate(rotated_cropped_img_ext, cv2.ROTATE_180)
 
         # Split the cropped meter into segments vertical parts for classification
         if (segments == 0): return [],[]
