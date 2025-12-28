@@ -181,7 +181,7 @@ class MeterPredictor:
 
         return base64s, digits, target_brightness, boundingboxed_image
 
-    def apply_threshold(self, digit, threshold_low, threshold_high, islanding_padding=40):
+    def apply_threshold(self, digit, threshold_low, threshold_high, islanding_padding=40, invert=False):
         threshold_low, threshold_high = int(threshold_low), int(threshold_high)
         islanding_padding = int(islanding_padding)
 
@@ -251,6 +251,8 @@ class MeterPredictor:
 
         # Encode image to Base64
         buffered = BytesIO()
+        if invert:
+            pil_img = Image.fromarray(255 - img_uint8)  # Invert for
         pil_img.save(buffered, format="PNG")
         img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
 
@@ -288,6 +290,7 @@ class MeterPredictor:
         # Apply thresholding
         thresholded_digits = []
         base64s = []
+        base64s_inverted = []
 
         threshold_low = thresholds[0]
         threshold_high = thresholds[1]
@@ -300,4 +303,12 @@ class MeterPredictor:
             thresholded_digits.append(digit)
             base64s.append(img_str)
 
-        return base64s, thresholded_digits
+            # also store inverted images as base64 for debugging
+            img_uint8 = (digit.squeeze() * 255).astype(np.uint8)
+            pil_img = Image.fromarray(255 - img_uint8)  # Invert for
+            buffered = BytesIO()
+            pil_img.save(buffered, format="PNG")
+            img_str_inverted = base64.b64encode(buffered.getvalue()).decode('utf-8')
+            base64s_inverted.append(img_str_inverted)
+
+        return base64s, thresholded_digits, base64s_inverted

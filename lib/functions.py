@@ -78,11 +78,11 @@ def reevaluate_digits(db_file: str, name: str, meter_preditor, config, offset: i
             print(f"[Eval ({name})] No thresholds found for {name}")
             return {"error": "No thresholds found"}
         else:
-            processed, digits = meter_preditor.apply_thresholds(digits, thresholds, thresholds_last, islanding_padding)
+            processed, digits, digits_inverted = meter_preditor.apply_thresholds(digits, thresholds, thresholds_last, islanding_padding)
             prediction = meter_preditor.predict_digits(digits)
 
         return {
-            "processed_images": processed,
+            "processed_images": digits_inverted,
             "predictions": prediction
         }
 
@@ -143,10 +143,11 @@ def reevaluate_latest_picture(db_file: str, name:str, meter_preditor, config, pu
         # Apply thresholds and extract the digits
         processed = []
         prediction = []
+        digits_inverted = []
         if len(thresholds) == 0:
             print(f"[Eval ({name})] No thresholds found for {name}")
         else:
-            processed, digits = meter_preditor.apply_thresholds(digits, thresholds, thresholds_last, islanding_padding)
+            processed, digits, digits_inverted = meter_preditor.apply_thresholds(digits, thresholds, thresholds_last, islanding_padding)
             prediction = meter_preditor.predict_digits(digits)
 
         # check for each digit if its highest conf is above conf_threshold, otherwise mark it as denied
@@ -198,6 +199,7 @@ def reevaluate_latest_picture(db_file: str, name:str, meter_preditor, config, pu
         ''', (name,))
         count = curser.fetchone()[0]
 
+
         if not skip_setup_overwriting and count > 0:
             # find id of last evaluation
             cursor.execute('''
@@ -217,7 +219,8 @@ def reevaluate_latest_picture(db_file: str, name:str, meter_preditor, config, pu
                                predictions = ?,
                                timestamp = ?,
                                result = ?,
-                               total_confidence = ?
+                               total_confidence = ?,
+                               th_digits_inverted = ?
                            WHERE name = ? AND id = ?
                            ''', (
                                json.dumps(result) if result is not None else None,
@@ -226,14 +229,15 @@ def reevaluate_latest_picture(db_file: str, name:str, meter_preditor, config, pu
                                timestamp if isinstance(timestamp, str) and timestamp.strip() else None,
                                value if value is not None else None,
                                float(confidence) if confidence is not None else None,
+                               json.dumps(digits_inverted),
                                name,
                                eval_id
                            ))
         else:
             cursor.execute('''
                            INSERT INTO evaluations
-                           (name, colored_digits, th_digits, predictions, timestamp, result, total_confidence, denied_digits)
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                           (name, colored_digits, th_digits, predictions, timestamp, result, total_confidence, denied_digits, th_digits_inverted)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                            ''', (
                                name,
                                json.dumps(result) if result is not None else None,
@@ -242,7 +246,8 @@ def reevaluate_latest_picture(db_file: str, name:str, meter_preditor, config, pu
                                timestamp if isinstance(timestamp, str) and timestamp.strip() else None,
                                value if value is not None else None,
                                float(confidence) if confidence is not None else None,
-                               json.dumps(denied_digits)
+                               json.dumps(denied_digits),
+                               json.dumps(digits_inverted)
                            ))
 
         # remove old evaluations

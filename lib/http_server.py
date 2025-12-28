@@ -253,6 +253,7 @@ def prepare_setup_app(config, lifespan):
             threshold_low: float = Body(0, ge=0, le=255),
             threshold_high: float = Body(155, ge=0, le=255),
             islanding_padding: int = Body(20, ge=0),
+            invert: bool = Body(False)
     ):
             # Decode the base64 image
             image_data = base64.b64decode(base64str)
@@ -263,7 +264,7 @@ def prepare_setup_app(config, lifespan):
             image = np.array(image)
 
             # Apply threshold with the passed values
-            base64r, digits = meter_preditor.apply_threshold(image, threshold_low, threshold_high, islanding_padding)
+            base64r, digits = meter_preditor.apply_threshold(image, threshold_low, threshold_high, islanding_padding, invert=invert)
 
             # Return the result
             return {"base64": base64r}
@@ -480,7 +481,7 @@ def prepare_setup_app(config, lifespan):
 
         # Build query with optional pagination
         query = """
-            SELECT colored_digits, th_digits, predictions, timestamp, result, total_confidence, outdated, id, denied_digits
+            SELECT colored_digits, th_digits, predictions, timestamp, result, total_confidence, outdated, id, denied_digits, th_digits_inverted
             FROM evaluations
             WHERE name = ?
         """
@@ -506,7 +507,8 @@ def prepare_setup_app(config, lifespan):
             "result": row[4],
             "total_confidence": row[5],
             "outdated": row[6],
-            "denied_digits": json.loads(row[8]) if row[8] else None
+            "denied_digits": json.loads(row[8]) if row[8] else None,
+            "th_digits_inverted": json.loads(row[9]) if row[9] else None
         } for row in cursor.fetchall()]}
 
     # POST endpoint for adding an evaluation

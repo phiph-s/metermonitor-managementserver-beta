@@ -31,7 +31,7 @@
                     Rejected
                   </div>
                 </td>
-                <td v-for="(base64, j) in evaluation.th_digits" :key="evaluation.id + '-' + j">
+                <td v-for="(base64, j) in evaluation.th_digits_inverted" :key="evaluation.id + '-' + j">
                   <img class="digit" :src="'data:image/png;base64,' + base64" alt="Watermeter" />
                 </td>
                 <td>
@@ -173,6 +173,7 @@ const openUploadDialog = (colored, thresholded, name, values) => {
 .digit {
   margin: 3px;
   height: 40px;
+  mix-blend-mode: screen;
 }
 
 .prediction {
@@ -223,7 +224,7 @@ const openUploadDialog = (colored, thresholded, name, values) => {
 }
 
 .outdated {
-  filter: brightness(0.7);
+
 }
 
 </style>

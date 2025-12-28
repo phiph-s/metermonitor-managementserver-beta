@@ -224,3 +224,43 @@ def run_migrations(db_file):
             print("[MIGRATION] Added 'denied_digits' column to 'evaluations' table and set default values")
 
 
+        # add column th_digits_inverted to evaluations table if it doesn't exist yet
+        # invert the th_digits and store in th_digits_inverted
+        cursor.execute("PRAGMA table_info(evaluations)")
+        columns = [info[1] for info in cursor.fetchall()]
+        if 'th_digits_inverted' not in columns:
+            cursor.execute('''
+                ALTER TABLE evaluations
+                ADD COLUMN th_digits_inverted TEXT
+            ''')
+            # load all images, invert colors of th_digits and store in th_digits_inverted
+            cursor.execute("SELECT name, th_digits FROM evaluations")
+            rows = cursor.fetchall()
+            for row in rows:
+                name = row["name"]
+                th_digits_json = row["th_digits"]
+                inverted_list = []
+                try:
+                    th_digits = json.loads(th_digits_json) if th_digits_json else []
+                    for digit_b64 in th_digits:
+                        # decode base64
+                        import base64
+                        from io import BytesIO
+                        from PIL import Image, ImageOps
+
+                        digit_data = base64.b64decode(digit_b64)
+                        digit_image = Image.open(BytesIO(digit_data)).convert("L")  # convert to grayscale
+                        inverted_image = ImageOps.invert(digit_image)
+                        buffered = BytesIO()
+                        inverted_image.save(buffered, format="PNG")
+                        inverted_b64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+                        inverted_list.append(inverted_b64)
+                except Exception:
+                    inverted_list = []
+                inverted_json = json.dumps(inverted_list)
+                cursor.execute("UPDATE evaluations SET th_digits_inverted = ? WHERE name = ?", (inverted_json, name))
+            print("[MIGRATION] Added 'th_digits_inverted' column to 'evaluations' table and populated values")
+
+        conn.commit()
+
+

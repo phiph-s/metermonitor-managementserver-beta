@@ -247,12 +247,14 @@ function getColor(value) {
 .digit{
   width: 18px;
   height: auto;
+  mix-blend-mode: screen;
 }
 
 .digit_small{
   margin: 0px;
   width: 16px;
   height: auto;
+  mix-blend-mode: screen;
 }
 
 .prediction{

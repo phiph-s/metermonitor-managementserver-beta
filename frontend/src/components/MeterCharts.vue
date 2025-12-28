@@ -45,7 +45,7 @@ const series = computed(() => {
     // item is [value, timestamp, confidence, manual]
     return {
       x: new Date(item[1]).getTime(),
-      y: item[0]
+      y: item[0] / 1000
     };
   });
 
@@ -73,81 +73,59 @@ const confidenceSeries = computed(() => {
 });
 
 const chartOptions = {
+  theme: { mode: 'dark' },
+  title: {
+    text: 'Consumption',
+  },
   chart: {
-    id: 'meter-history',
-    type: 'area',
-    zoom: {
-      enabled: true,
-      autoScaleYaxis: true
-    },
-    toolbar: {
-      autoSelected: 'zoom'
-    }
+    type: 'line',
+    zoom: { enabled: true },
+    background: '#00000000',
   },
   xaxis: {
-    type: 'datetime'
+    type: "datetime",
+    labels: {
+      rotate: -30, // Less rotation for compactness
+      format: "dd MMM HH:mm", // Shorter date format
+    },
+    tickAmount: 5, // Reduces number of ticks for compactness
   },
-  stroke: {
-    curve: 'stepline',
-    width: 2
+  yaxis: {
+    title: {text: 'Consumption m³'},
+    labels: {
+    },
   },
-  dataLabels: {
-    enabled: false
-  },
+  stroke: { curve: 'smooth' },
   tooltip: {
-    x: {
-      format: 'dd MMM yyyy HH:mm'
-    }
-  },
-  fill: {
-    type: 'gradient',
-    gradient: {
-      shadeIntensity: 1,
-      opacityFrom: 0.7,
-      opacityTo: 0.9,
-      stops: [0, 100]
-    }
-  },
-  theme: {
-    mode: 'dark',
-    palette: 'palette1'
+    x: { format: 'dd MMM HH:mm' },
   }
 };
 
 const confidenceChartOptions = {
+  theme: { mode: 'dark' },
+  title: {
+    text: 'Confidence',
+  },
   chart: {
-    id: 'meter-confidence',
     type: 'line',
-    zoom: {
-      enabled: true,
-      autoScaleYaxis: true
-    },
-    toolbar: {
-      autoSelected: 'zoom'
-    }
+    zoom: { enabled: true },
+    background: '#00000000',
   },
   xaxis: {
-    type: 'datetime'
-  },
-  stroke: {
-    curve: 'smooth',
-    width: 2
-  },
-  dataLabels: {
-    enabled: false
-  },
-  tooltip: {
-    x: {
-      format: 'dd MMM yyyy HH:mm'
-    }
-  },
-  theme: {
-    mode: 'dark',
-    palette: 'palette2'
+    type: "datetime",
+    labels: {
+      rotate: -30, // Less rotation for compactness
+      format: "dd MMM HH:mm", // Shorter date format
+    },
+    tickAmount: 5, // Reduces number of ticks for compactness
   },
   yaxis: {
-    min: 0,
-    max: 1
+    title: {text: 'Confidence %'},
+    labels: { formatter: (value) => value.toFixed(1) + '%' }
+  },
+  stroke: { curve: 'smooth' },
+  tooltip: {
+    x: { format: 'dd MMM HH:mm' },
   }
 };
 </script>

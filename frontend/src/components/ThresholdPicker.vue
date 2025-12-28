@@ -134,7 +134,8 @@ async function thresholdImage(base64, threshold, islanding_padding = 0) {
       base64str: base64,
       threshold_low: threshold[0],
       threshold_high: threshold[1],
-      islanding_padding: islanding_padding
+      islanding_padding: islanding_padding,
+      invert: true
     })
   });
   const result = await response.json();
@@ -147,5 +148,6 @@ async function thresholdImage(base64, threshold, islanding_padding = 0) {
 .digit{
   width: 18px;
   height: auto;
+  mix-blend-mode: screen;
 }
 </style>
