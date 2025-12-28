@@ -100,7 +100,7 @@
                     }"
                   >
 
-                    <template v-if="i == evaluation.th_digits.length-4">
+                    <template v-if="i === evaluation.th_digits.length-4">
                       {{ digit }},
                     </template>
                     <template v-else>
@@ -114,17 +114,21 @@
           </table>
         </n-flex>
       </div>
+      <div style="display: flex; justify-content: center; margin-top: 10px;">
+        <n-button @click="emit('loadMore')">Load more</n-button>
+      </div>
     </template>
   </div>
 </template>
 
 <script setup>
-import { defineProps, h } from 'vue';
+import { defineProps, h, defineEmits } from 'vue';
 import {NFlex, NTooltip, NEmpty, NButton, NIcon, useDialog} from 'naive-ui';
 import { ArchiveOutlined } from '@vicons/material';
 import DatasetUploader from "@/components/DatasetUploader.vue";
 
 const dialog = useDialog();
+const emit = defineEmits(['loadMore']);
 
 defineProps({
   evaluations: {

@@ -24,7 +24,7 @@
             :evaluation="evaluation"
             :loading="loading"
             :no-bounding-box="noBoundingBox"
-            @update="(settings) => setupStore.updateSegmentationSettings(settings, id)"
+            @update="(newSettings) => setupStore.updateSegmentationSettings(newSettings, id)"
             @next="() => setupStore.nextStep(1)"/>
         <br>
         <n-alert title="Example" type="info">
@@ -107,9 +107,17 @@ const watermeterStore = useWatermeterStore();
 const setupStore = useSetupStore();
 
 // Get reactive state from stores
-const { lastPicture, evaluation, threshold, thresholdLast, islandingPadding,
-        segments, extendedLastDigit, last3DigitsNarrow, rotated180, maxFlowRate } = storeToRefs(watermeterStore);
+const { lastPicture, evaluation, settings } = storeToRefs(watermeterStore);
 const { currentStep, randomExamples, noBoundingBox, loading } = storeToRefs(setupStore);
+
+const threshold = computed(() => [settings.value?.threshold_low || 0, settings.value?.threshold_high || 0]);
+const thresholdLast = computed(() => [settings.value?.threshold_last_low || 0, settings.value?.threshold_last_high || 0]);
+const islandingPadding = computed(() => settings.value?.islanding_padding || 0);
+const segments = computed(() => settings.value?.segments || 0);
+const extendedLastDigit = computed(() => settings.value?.extended_last_digit || false);
+const last3DigitsNarrow = computed(() => settings.value?.shrink_last_3 || false);
+const rotated180 = computed(() => settings.value?.rotated_180 || false);
+const maxFlowRate = computed(() => settings.value?.max_flow_rate || 0);
 
 // Computed property for tresholdedImages (keeping backwards compatibility)
 const tresholdedImages = computed(() => {

@@ -10,8 +10,8 @@
           <img class="digit" v-for="[i,base64] in tresholdedImages.slice(0,-3).entries()" :src="'data:image/png;base64,' + base64" :key="i+'b'" alt="Watermeter" style="height: 50px" />
         </n-flex>
         <br>
-        <n-slider :value="threshold" @update:value="updateThreshold" range :step="1" :max="255" @mouseup="sendUpdate" style="max-width: 150px;" :disabled="loading"/>
-        {{threshold[0]}} - {{threshold[1]}}
+        <n-slider :value="currentThreshold" @update:value="updateThreshold" range :step="1" :max="255" @mouseup="sendUpdate" style="max-width: 150px;" :disabled="loading"/>
+        {{currentThreshold[0]}} - {{currentThreshold[1]}}
       </div>
       <div>
         <n-flex justify="space-around" size="large" v-if="evaluation">
@@ -22,13 +22,13 @@
           <img class="digit" v-for="[i,base64] in tresholdedImages.slice(-3).entries()" :src="'data:image/png;base64,' + base64" :key="i+'b'" alt="Watermeter" style="height: 50px"/>
         </n-flex>
         <br>
-        <n-slider :value="threshold_last" @update:value="updateThresholdLast" range :step="1" :max="255" @mouseup="sendUpdate" style="max-width: 150px;" :disabled="loading"/>
-        {{threshold_last[0]}} - {{threshold_last[1]}}
+        <n-slider :value="currentThresholdLast" @update:value="updateThresholdLast" range :step="1" :max="255" @mouseup="sendUpdate" style="max-width: 150px;" :disabled="loading"/>
+        {{currentThresholdLast[0]}} - {{currentThresholdLast[1]}}
       </div>
     </n-flex>
     <n-divider></n-divider>
     Extraction padding
-      <n-slider :value="islanding_padding" @update:value="updateIslandingPadding" :step="1" :max="100" @mouseup="sendUpdate" style="max-width: 150px;" :disabled="loading"/>
+      <n-slider :value="currentIslandingPadding" @update:value="updateIslandingPadding" :step="1" :max="100" @mouseup="sendUpdate" style="max-width: 150px;" :disabled="loading"/>
     <template #action>
       <n-flex justify="end" size="large">
         <n-button
@@ -80,6 +80,18 @@ onMounted(() => {
 
 watch(() => props.evaluation, () => {
   refreshThresholds();
+});
+
+watch(() => props.threshold, (newVal) => {
+  currentThreshold.value = newVal;
+});
+
+watch(() => props.threshold_last, (newVal) => {
+  currentThresholdLast.value = newVal;
+});
+
+watch(() => props.islanding_padding, (newVal) => {
+  currentIslandingPadding.value = newVal;
 });
 
 const sendUpdate = () => {

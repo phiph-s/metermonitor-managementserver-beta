@@ -27,9 +27,11 @@ export const useSetupStore = defineStore('setup', () => {
   const updateThresholds = async (data, meterId) => {
     const watermeterStore = useWatermeterStore();
     
-    watermeterStore.threshold = data.threshold;
-    watermeterStore.thresholdLast = data.threshold_last;
-    watermeterStore.islandingPadding = data.islanding_padding;
+    watermeterStore.settings.threshold_low = data.threshold[0];
+    watermeterStore.settings.threshold_high = data.threshold[1];
+    watermeterStore.settings.threshold_last_low = data.threshold_last[0];
+    watermeterStore.settings.threshold_last_high = data.threshold_last[1];
+    watermeterStore.settings.islanding_padding = data.islanding_padding;
 
     // Cancel any ongoing loading and clear random examples
     loadingCancelled.value = true;
@@ -41,7 +43,7 @@ export const useSetupStore = defineStore('setup', () => {
   const updateMaxFlow = async (value, meterId) => {
     const watermeterStore = useWatermeterStore();
     
-    watermeterStore.maxFlowRate = value;
+    watermeterStore.settings.max_flow_rate = value;
     await watermeterStore.updateSettings(meterId);
   };
 
@@ -51,10 +53,10 @@ export const useSetupStore = defineStore('setup', () => {
     // Cancel any ongoing loading
     loadingCancelled.value = true;
 
-    watermeterStore.segments = data.segments;
-    watermeterStore.extendedLastDigit = data.extendedLastDigit;
-    watermeterStore.last3DigitsNarrow = data.last3DigitsNarrow;
-    watermeterStore.rotated180 = data.rotated180;
+    watermeterStore.settings.segments = data.segments;
+    watermeterStore.settings.extended_last_digit = data.extendedLastDigit;
+    watermeterStore.settings.shrink_last_3 = data.last3DigitsNarrow;
+    watermeterStore.settings.rotated_180 = data.rotated180;
 
     await watermeterStore.updateSettings(meterId);
     await reevaluate(meterId);

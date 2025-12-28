@@ -1,12 +1,14 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { ref, reactive } from 'vue';
 import { apiService } from '@/services/api';
 
 export const useWatermeterStore = defineStore('watermeter', () => {
   // State
   const lastPicture = ref(null);
-  const evaluation = ref(null);
-  const settings = ref({
+  const evaluations = ref([]);
+  const evaluation = ref({});
+  const history = ref(null);
+  const settings = reactive({
     threshold_low: 0,
     threshold_high: 100,
     threshold_last_low: 0,
@@ -19,53 +21,6 @@ export const useWatermeterStore = defineStore('watermeter', () => {
     max_flow_rate: 1.0,
   });
 
-  // Getters
-  const threshold = computed({
-    get: () => [settings.value.threshold_low, settings.value.threshold_high],
-    set: (value) => {
-      settings.value.threshold_low = value[0];
-      settings.value.threshold_high = value[1];
-    },
-  });
-
-  const thresholdLast = computed({
-    get: () => [settings.value.threshold_last_low, settings.value.threshold_last_high],
-    set: (value) => {
-      settings.value.threshold_last_low = value[0];
-      settings.value.threshold_last_high = value[1];
-    },
-  });
-
-  const islandingPadding = computed({
-    get: () => settings.value.islanding_padding,
-    set: (value) => { settings.value.islanding_padding = value; },
-  });
-
-  const segments = computed({
-    get: () => settings.value.segments,
-    set: (value) => { settings.value.segments = value; },
-  });
-
-  const extendedLastDigit = computed({
-    get: () => settings.value.extended_last_digit,
-    set: (value) => { settings.value.extended_last_digit = value; },
-  });
-
-  const last3DigitsNarrow = computed({
-    get: () => settings.value.shrink_last_3,
-    set: (value) => { settings.value.shrink_last_3 = value; },
-  });
-
-  const rotated180 = computed({
-    get: () => settings.value.rotated_180,
-    set: (value) => { settings.value.rotated_180 = value; },
-  });
-
-  const maxFlowRate = computed({
-    get: () => settings.value.max_flow_rate,
-    set: (value) => { settings.value.max_flow_rate = value; },
-  });
-
   // Actions
   const fetchWatermeter = async (meterId) => {
     const data = await apiService.getJson(`api/watermeters/${meterId}`);
@@ -73,9 +28,28 @@ export const useWatermeterStore = defineStore('watermeter', () => {
     return data;
   };
 
-  const fetchEvaluations = async (meterId, amount = 1) => {
-    const data = await apiService.getJson(`api/watermeters/${meterId}/evals?amount=${amount}`);
-    evaluation.value = data.evals && data.evals.length > 0 ? data.evals[0] : null;
+  const fetchEvaluations = async (meterId, amount = 20, fromId = null) => {
+    let url = `api/watermeters/${meterId}/evals?amount=${amount}`;
+    if (fromId) {
+      url += `&from_id=${fromId}`;
+    }
+    const data = await apiService.getJson(url);
+    if (fromId) {
+      if (data.evals) {
+        evaluations.value.push(...data.evals);
+      }
+    } else {
+      evaluations.value = data.evals || [];
+      if (evaluations.value.length > 0) {
+        evaluation.value = evaluations.value[0];
+      }
+    }
+    return data;
+  };
+
+  const fetchHistory = async (meterId) => {
+    const data = await apiService.getJson(`api/watermeters/${meterId}/history`);
+    history.value = data;
     return data;
   };
 
@@ -83,7 +57,7 @@ export const useWatermeterStore = defineStore('watermeter', () => {
     const data = await apiService.getJson(`api/watermeters/${meterId}/settings`);
 
     // Update settings state
-    settings.value = {
+    Object.assign(settings, {
       threshold_low: data.threshold_low,
       threshold_high: data.threshold_high,
       threshold_last_low: data.threshold_last_low,
@@ -94,23 +68,23 @@ export const useWatermeterStore = defineStore('watermeter', () => {
       shrink_last_3: data.shrink_last_3 === 1,
       rotated_180: data.rotated_180 === 1,
       max_flow_rate: data.max_flow_rate,
-    };
-    
+    });
+
     return data;
   };
 
   const updateSettings = async (meterId) => {
     const payload = {
-      threshold_low: settings.value.threshold_low,
-      threshold_high: settings.value.threshold_high,
-      threshold_last_low: settings.value.threshold_last_low,
-      threshold_last_high: settings.value.threshold_last_high,
-      islanding_padding: settings.value.islanding_padding,
-      rotated_180: settings.value.rotated_180,
-      segments: settings.value.segments,
-      extended_last_digit: settings.value.extended_last_digit,
-      shrink_last_3: settings.value.shrink_last_3,
-      max_flow_rate: settings.value.max_flow_rate,
+      threshold_low: settings.threshold_low,
+      threshold_high: settings.threshold_high,
+      threshold_last_low: settings.threshold_last_low,
+      threshold_last_high: settings.threshold_last_high,
+      islanding_padding: settings.islanding_padding,
+      rotated_180: settings.rotated_180,
+      segments: settings.segments,
+      extended_last_digit: settings.extended_last_digit,
+      shrink_last_3: settings.shrink_last_3,
+      max_flow_rate: settings.max_flow_rate,
     };
 
     await apiService.put(`api/watermeters/${meterId}/settings`, payload);
@@ -120,6 +94,7 @@ export const useWatermeterStore = defineStore('watermeter', () => {
     await Promise.all([
       fetchWatermeter(meterId),
       fetchEvaluations(meterId),
+      fetchHistory(meterId),
       fetchSettings(meterId),
     ]);
   };
@@ -127,23 +102,16 @@ export const useWatermeterStore = defineStore('watermeter', () => {
   return {
     // State
     lastPicture,
+    evaluations,
     evaluation,
+    history,
     settings,
-    // Getters
-    threshold,
-    thresholdLast,
-    islandingPadding,
-    segments,
-    extendedLastDigit,
-    last3DigitsNarrow,
-    rotated180,
-    maxFlowRate,
     // Actions
     fetchWatermeter,
     fetchEvaluations,
+    fetchHistory,
     fetchSettings,
     updateSettings,
     fetchAll,
   };
 });
-

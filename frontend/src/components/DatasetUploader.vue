@@ -34,6 +34,7 @@
 <script setup>
 import {ref, computed, watchEffect} from 'vue'
 import { NRadioGroup, NRadioButton, NButton } from 'naive-ui'
+import {apiService} from "@/services/api";
 
 const props = defineProps({
   colored: { type: Array, required: true },
@@ -110,11 +111,7 @@ async function upload() {
     const headers = { 'Content-Type': 'application/json' }
     if (localStorage.getItem('secret')) headers['secret'] = localStorage.getItem('secret')
 
-    const res = await fetch('api/dataset/upload', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(payload)
-    })
+    const res = await apiService.post("api/dataset/upload", payload)
 
     if (!res.ok) {
       const text = await res.text()

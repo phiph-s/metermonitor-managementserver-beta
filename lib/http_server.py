@@ -466,7 +466,7 @@ def prepare_setup_app(config, lifespan):
 
     # GET endpoint for retrieving evaluations
     @app.get("/api/watermeters/{name}/evals", dependencies=[Depends(authenticate)])
-    def get_evals(name: str, amount: int = None, from_index: int = None):
+    def get_evals(name: str, amount: int = None, from_id: int = None):
         cursor = db_connection().cursor()
         # Check if watermeter exists
         cursor.execute("SELECT name FROM watermeters WHERE name = ?", (name,))
@@ -480,16 +480,18 @@ def prepare_setup_app(config, lifespan):
             SELECT colored_digits, th_digits, predictions, timestamp, result, total_confidence, outdated, id
             FROM evaluations
             WHERE name = ?
-            ORDER BY id DESC
         """
         params = [name]
+
+        if from_id is not None:
+            query += " AND id < ?"
+            params.append(from_id)
+
+        query += " ORDER BY id DESC"
 
         if amount is not None:
             query += " LIMIT ?"
             params.append(amount)
-            if from_index is not None:
-                query += " OFFSET ?"
-                params.append(from_index)
 
         cursor.execute(query, params)
         return {"evals": [{

@@ -51,28 +51,28 @@
       <n-card size="small">
         <n-list>
           <n-list-item>
-            <n-thing title="Thresholds" :title-extra="`${threshold[0]} - ${threshold[1]}`" />
+            <n-thing title="Thresholds" :title-extra="`${settings.threshold_low} - ${settings.threshold_high}`" />
           </n-list-item>
           <n-list-item>
-            <n-thing title="Last digit thresholds" :title-extra="`${threshold_last[0]} - ${threshold_last[1]}`" />
+            <n-thing title="Last digit thresholds" :title-extra="`${settings.threshold_last_low} - ${settings.threshold_last_high}`" />
           </n-list-item>
           <n-list-item>
-            <n-thing title="Islanding padding" :title-extra="islanding_padding" />
+            <n-thing title="Islanding padding" :title-extra="settings.islanding_padding" />
           </n-list-item>
           <n-list-item>
-            <n-thing title="Segments" :title-extra="segments" />
+            <n-thing title="Segments" :title-extra="settings.segments" />
           </n-list-item>
           <n-list-item>
-            <n-thing title="Extended last digit" :title-extra="extendedLastDigit ? 'Yes' : 'No'" />
+            <n-thing title="Extended last digit" :title-extra="settings.extended_last_digit ? 'Yes' : 'No'" />
           </n-list-item>
           <n-list-item>
-            <n-thing title="Last 3 digits narrow" :title-extra="last3DigitsNarrow ? 'Yes' : 'No'" />
+            <n-thing title="Last 3 digits narrow" :title-extra="settings.shrink_last_3 ? 'Yes' : 'No'" />
           </n-list-item>
           <n-list-item>
-            <n-thing title="Rotated 180" :title-extra="rotated180 ? 'Yes' : 'No'" />
+            <n-thing title="Rotated 180" :title-extra="settings.rotated_180 ? 'Yes' : 'No'" />
           </n-list-item>
           <n-list-item>
-            <n-thing title="Max. flow rate" :title-extra="maxFlowRate + ' m³/h'" />
+            <n-thing title="Max. flow rate" :title-extra="settings.max_flow_rate + ' m³/h'" />
           </n-list-item>
         </n-list>
       </n-card>
@@ -105,7 +105,7 @@
       </template>
     </div>
     <div style="padding-left: 20px; padding-right: 10px;" v-if="evaluations !== null">
-      <EvaluationResultList :evaluations="evaluations" :name="id"/>
+      <EvaluationResultList :evaluations="evaluations" :name="id" @load-more="loadMoreEvaluations"/>
     </div>
     <div style="max-width: 500px;">
       <n-card size="small" style="overflow: hidden;">
@@ -154,62 +154,35 @@ import EvaluationResultList from "@/components/EvaluationResultList.vue";
 import {NFlex, NCard, NButton, NPopconfirm, NList, NListItem, NThing, NCollapse, NCollapseItem, NIcon} from "naive-ui";
 import { DeleteForeverFilled } from '@vicons/material';
 import WifiStatus from "@/components/WifiStatus.vue";
+import { useWatermeterStore } from '@/stores/watermeterStore';
+import { storeToRefs } from 'pinia';
 
 const route = useRoute();
 const id = route.params.id;
+const store = useWatermeterStore();
+const { lastPicture: data, evaluations, history, settings } = storeToRefs(store);
 
 const loading = ref(false);
-const data = ref(null);
-const evaluations = ref(null);
-const history = ref(null);
 const downloadingDataset = ref(false);
-
-const threshold = ref([0, 0]);
-const threshold_last = ref([0, 0]);
-const islanding_padding = ref(0);
-const segments = ref(0);
-const extendedLastDigit = ref(false);
-const last3DigitsNarrow = ref(false);
-const rotated180 = ref(false);
-const maxFlowRate = ref(1.0);
 
 const host = import.meta.env.VITE_HOST;
 
 const loadMeter = async () => {
   loading.value = true;
-  let response = await fetch(host + 'api/watermeters/' + id, {
-    headers: { secret: localStorage.getItem('secret') }
-  });
-  if (response.status === 401) {
-    router.push({ path: '/unlock' });
+  try {
+    await store.fetchAll(id);
+  } catch (e) {
+    if (e.response && e.response.status === 401) {
+      router.push({ path: '/unlock' });
+    }
   }
-  data.value = await response.json();
-
-  response = await fetch(host + 'api/watermeters/' + id + '/evals?amount=20', {
-    headers: { secret: localStorage.getItem('secret') }
-  });
-  const evals = await response.json();
-  evaluations.value = (evals?.evals || []);
-
-  response = await fetch(host + 'api/watermeters/' + id + '/history', {
-    headers: { secret: localStorage.getItem('secret') }
-  });
-  history.value = await response.json();
-
-  response = await fetch(host + 'api/settings/' + id, {
-    headers: { secret: localStorage.getItem('secret') }
-  });
-  let result = await response.json();
-  threshold.value = [result.threshold_low, result.threshold_high];
-  threshold_last.value = [result.threshold_last_low, result.threshold_last_high];
-  islanding_padding.value = result.islanding_padding;
-  segments.value = result.segments;
-  extendedLastDigit.value = result.extended_last_digit === 1;
-  last3DigitsNarrow.value = result.shrink_last_3 === 1;
-  rotated180.value = result.rotated_180 === 1;
-  maxFlowRate.value = result.max_flow_rate;
-
   loading.value = false;
+};
+
+const loadMoreEvaluations = async () => {
+  if (!evaluations.value || evaluations.value.length === 0) return;
+  const lastId = evaluations.value[evaluations.value.length - 1].id;
+  await store.fetchEvaluations(id, 10, lastId);
 };
 
 onMounted(() => {
