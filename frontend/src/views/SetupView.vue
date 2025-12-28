@@ -7,14 +7,14 @@
     <img src="@/assets/logo.png" alt="Logo" style="max-width: 100px; margin-left: 20px;"/>
     <n-button :loading="loading" @click="() => setupStore.getData(id)" round size="large" style="margin-left: 20px;">Refresh</n-button>
   </n-flex>
-    <n-h2>Setup for {{ id }}</n-h2>
-
-  <n-steps :current="currentStep">
+    <n-h2>Setup for {{ id }}{{currentlyFocusedStep}}</n-h2>
+  <n-steps :current="currentlyFocusedStep" :vertical="narrowScreen">
     <n-step
       title="Segmentation"
-      style="max-width: 500px"
+      style="max-width: 500px; cursor: pointer;"
+      @click="() => {if (currentlyFocusedStep != 1 && currentStep > 0) {currentlyFocusedStep = 1;}}"
     >
-      <div :style="{opacity: (currentStep > 1)?0.7:1.0}">
+      <div v-if="(narrowScreen && currentlyFocusedStep == 1) || (!narrowScreen)">
         <SegmentationConfigurator
             :last-picture="lastPicture"
             :extended-last-digit="extendedLastDigit"
@@ -26,7 +26,9 @@
             :loading="loading"
             :no-bounding-box="noBoundingBox"
             @update="(newSettings) => setupStore.updateSegmentationSettings(newSettings, id)"
-            @next="() => setupStore.nextStep(1)"/>
+            @next="() => {setupStore.nextStep(1); currentlyFocusedStep = 2;}"
+            @click="(e) => e.stopPropagation()"
+        />
         <br>
         <n-alert title="Example" type="info">
           <img src="@/assets/example_segmentation.png" alt="Example segmentation" style="max-width: 100%"/>
@@ -37,9 +39,10 @@
     </n-step>
     <n-step
       title="Threshold Extraction"
-      style="max-width: 600px"
+      style="max-width: 600px; cursor: pointer;"
+      @click="() => {if (currentlyFocusedStep != 2  && currentStep > 1) {currentlyFocusedStep = 2;}}"
     >
-      <div v-if="currentStep > 1" :style="{opacity: (currentStep > 2)?0.7:1.0}">
+      <div v-if="(narrowScreen && currentlyFocusedStep == 2) || (!narrowScreen && currentStep > 1)">
         <ThresholdPicker
             :evaluation="evaluation"
             :run="tresholdedImages[tresholdedImages.length-1]"
@@ -49,7 +52,8 @@
             :loading="loading"
             @update="(data) => setupStore.updateThresholds(data, id)"
             @reevaluate="() => setupStore.redoDigitEval(id) && setupStore.clearEvaluationExamples(id)"
-            @next="() => setupStore.nextStep(2)"
+            @next="() =>  {setupStore.nextStep(2); currentlyFocusedStep = 3}"
+            @click="(e) => e.stopPropagation()"
         />
         <br>
         <n-alert title="Example" type="info">
@@ -64,9 +68,10 @@
     <n-step
       title="Evaluation Preview"
       v-if="lastPicture"
-      style="max-width: 620px"
+      style="max-width: 620px; cursor: pointer;"
+      @click="() => {if (currentlyFocusedStep != 3 && currentStep > 2) {currentlyFocusedStep = 3;}}"
     >
-      <div v-if="currentStep > 2">
+      <div v-if="(narrowScreen && currentlyFocusedStep == 3) || (!narrowScreen && currentStep > 2)">
         <EvaluationConfigurator
             :evaluation="evaluation"
             :max-flow-rate="maxFlowRate" :loading="loading"
@@ -78,6 +83,7 @@
             :confidence-threshold="confThreshold"
             :timestamp="lastPicture.picture.timestamp"
             :randomExamples="randomExamples"
+            @click="(e) => e.stopPropagation()"
         />
          <br>
         <n-alert title="Info" type="info">
@@ -92,7 +98,7 @@
 </template>
 
 <script setup>
-import { onMounted, computed } from 'vue';
+import {onMounted, computed, ref, watch} from 'vue';
 import { NSteps, NStep, NButton, NAlert, NFlex, NH2 } from 'naive-ui';
 import { useRoute } from 'vue-router';
 import { storeToRefs } from 'pinia';
@@ -108,6 +114,10 @@ const id = route.params.id;
 // Initialize stores
 const watermeterStore = useWatermeterStore();
 const setupStore = useSetupStore();
+
+const narrowScreen = computed(() => window.innerWidth < 1500);
+
+const currentlyFocusedStep = ref(1);
 
 // Get reactive state from stores
 const { lastPicture, evaluation, settings } = storeToRefs(watermeterStore);

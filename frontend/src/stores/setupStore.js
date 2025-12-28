@@ -183,6 +183,7 @@ export const useSetupStore = defineStore('setup', () => {
   };
 
   const reset = () => {
+    console.log('Resetting setup store state');
     currentStep.value = 1;
     randomExamples.value = [];
     noBoundingBox.value = false;
