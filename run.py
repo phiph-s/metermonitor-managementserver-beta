@@ -117,8 +117,8 @@ if config['http']['enabled']:
         yield
 
     app = prepare_setup_app(config, lifespan)
-    uvicorn.run(app, host=config['http']['host'], port=config['http']['port'], log_level="error")
     print(f"[INIT] Started setup server on http://{config['http']['host']}:{config['http']['port']}")
+    uvicorn.run(app, host=config['http']['host'], port=config['http']['port'], log_level="error")
 
 else:
     mqtt_handler = MQTTHandler(config, db_file=config['dbfile'], forever=True)

@@ -32,7 +32,7 @@
       <br>
       <n-collapse v-if="randomExamples && randomExamples.length > 0">
         <n-collapse-item title="Show results" name="1">
-          <n-grid :cols="15" y-gap="4">
+          <n-grid :cols="evaluation['th_digits'].length * 2" y-gap="4">
             <template v-for="[i, example] in randomExamples.entries()" :key="i + 'example'">
               <n-gi justify="space-around" size="small" v-for="[i,base64] in example['processed_images'].entries()" :key="i + 'x'" class="grid-container">
                 <img
@@ -41,7 +41,11 @@
                     alt="D"
                 />
                 <br>
-                <span class="prediction_small" :style="{color: getColor(example['predictions'][i][0][1])}">
+                <span
+                    class="prediction_small"
+                    :style="{color: getColor(example['predictions'][i][0][1])}"
+                    :title="`${example['predictions'][i][0][0]}: ${(example['predictions'][i][0][1]*100).toFixed(1)}\n${example['predictions'][i][1][0]}: ${(example['predictions'][i][1][1]*100).toFixed(1)}\n${example['predictions'][i][2][0]}: ${(example['predictions'][i][2][1]*100).toFixed(1)}`"
+                >
                   {{ (example['predictions'][i][0][0]==='r')? '↕' : example['predictions'][i][0][0] }}
                 </span>
               </n-gi>
@@ -214,6 +218,7 @@ function getColor(value) {
 .prediction_small{
   margin-top: -5px;
   font-size: 20px;
+  cursor: help;
 }
 
 .confidence{

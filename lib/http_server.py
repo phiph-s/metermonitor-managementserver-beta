@@ -461,6 +461,7 @@ def prepare_setup_app(config, lifespan):
     def get_reevaluated_digits(name: str, offset: int = None):
         # returns a set of random digits from historic evaluations for the given watermeter, evaluated with the current settings
         # if offset is provided, returns the evaluation at that offset from the latest (0 = latest, 1 = second latest, etc.)
+        # if offset is -1, returns a random evaluation
         return reevaluate_digits(config['dbfile'], name, meter_preditor, config, offset)
 
     # GET endpoint for retrieving evaluations

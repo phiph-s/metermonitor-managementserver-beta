@@ -116,16 +116,14 @@ class MQTTHandler:
                 data['picture']['timestamp'] = datetime.datetime.now().isoformat()
                 print(f"[MQTT] Timestamp was missing or zero, set to current time for {data['name']} ({data['picture']['timestamp']})")
 
-            _, _, boundingboxed_image = reevaluate_latest_picture(self.db_file, data['name'], self.meter_preditor, self.config, publish=True, mqtt_client=self.client)
-
             with sqlite3.connect(self.db_file) as conn:
                 cursor = conn.cursor()
                 #check if watermeter exists
                 cursor.execute("SELECT * FROM watermeters WHERE name = ?", (data['name'],))
                 if not cursor.fetchone():
                     cursor.execute('''
-                        INSERT INTO watermeters
-                        VALUES (?,?,?,?,?,?,?,?,?,?)
+                        INSERT INTO watermeters (name, picture_number, wifi_rssi, picture_format, picture_timestamp, picture_width, picture_height, picture_length, picture_data, setup, picture_data_bbox)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,NULL)
                     ''', (
                         data['name'],
                         data['picture_number'],
@@ -136,8 +134,7 @@ class MQTTHandler:
                         data['picture']['height'],
                         data['picture']['length'],
                         data['picture']['data'],
-                        0,
-                        boundingboxed_image
+                        0
                     ))
                     cursor.execute('''
                                     INSERT OR IGNORE INTO settings
@@ -169,7 +166,7 @@ class MQTTHandler:
                                 picture_height = ?, 
                                 picture_length = ?, 
                                 picture_data = ?,
-                                picture_data_bbox = ?
+                                picture_data_bbox = NULL
                             WHERE name = ?
                         ''', (
                         data['picture_number'],
@@ -180,11 +177,26 @@ class MQTTHandler:
                         data['picture']['height'],
                         data['picture']['length'],
                         data['picture']['data'],
-                        boundingboxed_image,
                         data['name']
                     ))
                 conn.commit()
                 print(f"[MQTT] Saved/updated metadata of {data['name']} to database.")
+                _, _, boundingboxed_image = reevaluate_latest_picture(self.db_file, data['name'], self.meter_preditor,
+                                                                      self.config, publish=True,
+                                                                      mqtt_client=self.client)
+                # Insert boundingboxed image into database
+                if boundingboxed_image:
+                    cursor.execute('''
+                        UPDATE watermeters 
+                        SET picture_data_bbox = ?
+                        WHERE name = ?
+                    ''', (
+                        boundingboxed_image,
+                        data['name']
+                    ))
+                    conn.commit()
+                    print(f"[MQTT] Saved boundingboxed image of {data['name']} to database.")
+
         except Exception as e:
             print(f"[MQTT] Error processing message: {e}")
             # print traceback

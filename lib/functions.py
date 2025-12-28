@@ -13,7 +13,14 @@ def reevaluate_digits(db_file: str, name: str, meter_preditor, config, offset: i
         cursor = conn.cursor()
 
         # Get eval from the database - either by offset or last
-        if offset is not None:
+        if offset == -1:
+            cursor.execute('''
+                SELECT colored_digits FROM evaluations
+                WHERE name = ?
+                ORDER BY RANDOM()
+                LIMIT 1
+            ''', (name,))
+        elif offset is not None:
             cursor.execute('''
                 SELECT colored_digits FROM evaluations
                 WHERE name = ?
@@ -72,7 +79,7 @@ def reevaluate_digits(db_file: str, name: str, meter_preditor, config, offset: i
             return {"error": "No thresholds found"}
         else:
             processed, digits = meter_preditor.apply_thresholds(digits, thresholds, thresholds_last, islanding_padding)
-            prediction, _ = meter_preditor.predict_digits(digits)
+            prediction = meter_preditor.predict_digits(digits)
 
         return {
             "processed_images": processed,
@@ -92,6 +99,7 @@ def reevaluate_latest_picture(db_file: str, name:str, meter_preditor, config, pu
         row = cursor.fetchone()
         if not row:
             conn.commit()
+            print(f"[Eval ({name})] No picture found for {name}")
             return None
         image_data = base64.b64decode(row[0])
         timestamp = row[1]
@@ -138,13 +146,13 @@ def reevaluate_latest_picture(db_file: str, name:str, meter_preditor, config, pu
             print(f"[Eval ({name})] No thresholds found for {name}")
         else:
             processed, digits = meter_preditor.apply_thresholds(digits, thresholds, thresholds_last, islanding_padding)
-            prediction, second_model_results = meter_preditor.predict_digits(digits)
+            prediction = meter_preditor.predict_digits(digits)
 
         # If the setup is finished, try to correct the value and save the result
         value = None
         confidence = 0
         if setup:
-            r = correct_value(db_file, name, [result, processed, prediction, timestamp, second_model_results], allow_negative_correction=config["allow_negative_correction"], max_flow_rate=max_flow_rate)
+            r = correct_value(db_file, name, [result, processed, prediction, timestamp], allow_negative_correction=config["allow_negative_correction"], max_flow_rate=max_flow_rate)
             if r is not None:
                 value, confidence = r
                 cursor.execute('''

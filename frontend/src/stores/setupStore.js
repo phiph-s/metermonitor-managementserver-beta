@@ -100,7 +100,6 @@ export const useSetupStore = defineStore('setup', () => {
     loadingCancelled.value = false;
 
     try {
-      // Load samples with increasing offset (0 to amount-1)
       for (let offset = 0; offset < amount; offset++) {
         // Check if loading was cancelled
         if (loadingCancelled.value) {
@@ -108,7 +107,7 @@ export const useSetupStore = defineStore('setup', () => {
           break;
         }
 
-        const url = `api/watermeters/${meterId}/evaluations/sample/${offset}`;
+        const url = `api/watermeters/${meterId}/evaluations/sample/-1`;
         const response = await apiService.post(url);
 
         if (response.ok) {

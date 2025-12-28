@@ -1,6 +1,5 @@
 import base64
-import os
-import random
+
 from io import BytesIO
 
 import cv2
@@ -8,6 +7,9 @@ import numpy as np
 from PIL import Image
 from ultralytics import YOLO
 from tensorflow.keras.models import load_model
+
+from lib.meter_processing.loss_fn import CostSensitiveLoss
+
 
 class MeterPredictor:
     """
@@ -24,7 +26,7 @@ class MeterPredictor:
         self.model = YOLO("models/yolo-best-obb-2.pt")
 
         # Load tensorflow model
-        self.digitmodel = load_model('models/th_digit_classifier_2.h5')
+        self.digitmodel = load_model('models/best_model.keras', custom_objects={'CostSensitiveLoss': CostSensitiveLoss})
         self.class_names = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'r']
 
     def extract_display_and_segment(self, input_image, segments=7, rotated_180=False, extended_last_digit=False, shrink_last_3=False, target_brightness=None):
@@ -262,23 +264,20 @@ class MeterPredictor:
         pairs = [(self.class_names[i], float(predictions[0][i])) for i in top3]
 
         # the second element of the pair is used to provide predictions from a second model for testing purposes
-        return pairs, None
+        return pairs
 
     def predict_digits(self, digits):
         """
         Digits are np arrays
         predict the digits
         """
-
         # Predict each digit
         predicted_digits = []
-        second_model_digits = []
         for i,digit in enumerate(digits):
-            digit, tess_digit = self.predict_digit(digit)
+            digit = self.predict_digit(digit)
             predicted_digits.append(digit)
-            second_model_digits.append(tess_digit)
 
-        return predicted_digits, second_model_digits
+        return predicted_digits
 
     def apply_thresholds(self, digits, thresholds, thresholds_last, islanding_padding):
         """

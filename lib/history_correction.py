@@ -20,7 +20,12 @@ def correct_value(db_file:str, name: str, new_eval, allow_negative_correction = 
         last_value = str(row[0]).zfill(segments)
         last_time = datetime.fromisoformat(row[1])
         last_confidence = row[2]
-        new_time = datetime.fromisoformat(new_eval[3])
+        try:
+            new_time = datetime.fromisoformat(new_eval[3])
+        except Exception as e:
+            print(f"[CorrectionAlg ({name})] Error parsing new evaluation time (assuming current): {e}")
+            new_time = datetime.now()
+
         new_results = new_eval[2]
 
         if last_time >= new_time:
