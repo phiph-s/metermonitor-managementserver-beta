@@ -59,7 +59,7 @@
     </n-checkbox><br>
     <template #action v-if="evaluation">
       <n-flex justify="space-around" size="large">
-        <img class="digit" v-for="base64 in evaluation['colored_digits']" :src="'data:image/png;base64,' + base64" :key="base64" alt="D" style="max-width: 40px"/>
+        <img class="digit" v-for="base64 in evaluation['colored_digits']" :src="'data:image/png;base64,' + base64" :key="base64" alt="D"/>
       </n-flex><br>
       <n-flex justify="end" size="large">
         <n-button
@@ -105,5 +105,10 @@ const handleUpdate = (field, value) => {
 <style scoped>
 .rotated{
   transform: rotate(180deg);
+}
+
+.digit{
+  width: 18px;
+  height: auto;
 }
 </style>

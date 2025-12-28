@@ -11,152 +11,64 @@
     </n-button>
   </n-flex>
   <br />
-  <n-flex size="large">
-    <div style="max-width: 300px">
-      <n-card v-if="data" :title="id" size="small">
-        <template #header-extra>
-          {{ new Date(data.picture.timestamp).toLocaleString() }}
-        </template>
-        <template #cover>
-          <img
-            :src="'data:image/' + data.picture.format + ';base64,' + data.picture.data_bbox"
-            alt="Watermeter"
-            :class="{ rotated: rotated180 }"
-          />
-        </template>
-      </n-card>
-      <br>
-      <WifiStatus v-if="data" :rssi="data['WiFi-RSSI']" />
-      <br><br>
-      <n-flex>
-        <n-popconfirm @positive-click="resetToSetup">
-          <template #trigger>
-            <n-button type="info" round style="width: 47%">
-              Setup
-            </n-button>
-          </template>
-          While the meter is in setup mode, no values will be published. Are you sure?
-        </n-popconfirm>
 
-        <n-popconfirm @positive-click="deleteMeter">
-          <template #trigger>
-            <n-button type="error" ghost round style="width: 47%">
-              Delete
-            </n-button>
-          </template>
-          This will delete the meter with all its settings and data. Are you sure?
-        </n-popconfirm>
-      </n-flex>
-      <br />
-      <n-card size="small">
-        <n-list>
-          <n-list-item>
-            <n-thing title="Thresholds" :title-extra="`${settings.threshold_low} - ${settings.threshold_high}`" />
-          </n-list-item>
-          <n-list-item>
-            <n-thing title="Last digit thresholds" :title-extra="`${settings.threshold_last_low} - ${settings.threshold_last_high}`" />
-          </n-list-item>
-          <n-list-item>
-            <n-thing title="Islanding padding" :title-extra="settings.islanding_padding" />
-          </n-list-item>
-          <n-list-item>
-            <n-thing title="Segments" :title-extra="settings.segments" />
-          </n-list-item>
-          <n-list-item>
-            <n-thing title="Extended last digit" :title-extra="settings.extended_last_digit ? 'Yes' : 'No'" />
-          </n-list-item>
-          <n-list-item>
-            <n-thing title="Last 3 digits narrow" :title-extra="settings.shrink_last_3 ? 'Yes' : 'No'" />
-          </n-list-item>
-          <n-list-item>
-            <n-thing title="Rotated 180" :title-extra="settings.rotated_180 ? 'Yes' : 'No'" />
-          </n-list-item>
-          <n-list-item>
-            <n-thing title="Max. flow rate" :title-extra="settings.max_flow_rate + ' m³/h'" />
-          </n-list-item>
-          <n-list-item>
-            <n-thing title="Conf. threshold" :title-extra="settings.conf_threshold + ' %d'" />
-          </n-list-item>
-        </n-list>
-      </n-card>
-      <template v-if="data && data.dataset_present">
-        <br />
-        <n-card size="small">
-          <n-flex justify="space-between" align="center">
-            <b>
-              Dataset
-            </b>
+  <template v-if="isMobile">
+    <n-tabs type="line" animated>
+      <n-tab-pane name="details" tab="Details">
+        <MeterDetails
+          :data="data"
+          :settings="settings"
+          :id="id"
+          :downloadingDataset="downloadingDataset"
+          @resetToSetup="resetToSetup"
+          @deleteMeter="deleteMeter"
+          @downloadDataset="downloadDataset"
+          @deleteDataset="deleteDataset"
+        />
+      </n-tab-pane>
+      <n-tab-pane name="evaluations" tab="Evaluations">
+        <div style="padding-left: 10px; padding-right: 10px;" v-if="evaluations !== null">
+          <EvaluationResultList :evaluations="evaluations" :name="id" @load-more="loadMoreEvaluations"/>
+        </div>
+      </n-tab-pane>
+      <n-tab-pane name="charts" tab="Charts">
+        <MeterCharts :history="history" />
+      </n-tab-pane>
+    </n-tabs>
+  </template>
 
-            <n-button type="primary" ghost round :loading="downloadingDataset" @click="downloadDataset">
-              Download
-            </n-button>
-
-            <n-popconfirm @positive-click="deleteDataset">
-              <template #trigger>
-                <n-button type="error" ghost circle>
-                  <template #icon>
-                    <n-icon>
-                      <DeleteForeverFilled />
-                    </n-icon>
-                  </template>
-                </n-button>
-              </template>
-              This will clear the dataset for this meter. Are you sure?
-            </n-popconfirm>
-          </n-flex>
-        </n-card>
-      </template>
-    </div>
-    <div style="padding-left: 20px; padding-right: 10px;" v-if="evaluations !== null">
-      <EvaluationResultList :evaluations="evaluations" :name="id" @load-more="loadMoreEvaluations"/>
-    </div>
-    <div style="max-width: 500px;">
-      <n-card size="small" style="overflow: hidden;">
-        <apex-chart width="468" height="200" type="line" :series="series" :options="options" />
-        <apex-chart width="468" height="200" type="line" :series="seriesConf" :options="optionsConf" />
-      </n-card>
-      <div style="margin-top: 30px; margin-bottom: 15px;">🛈 Correctional Algorithm</div>
-      <n-collapse accordion>
-        <n-collapse-item title="Per-digit greedy correction" name="1">
-          <div>
-            Keep flow rate positive: Choose the highest-confidence digit that keeps the reconstructed reading >= last reading prefix.
-            Corrected values will be marked in red.<br><br>
-            <img src="@/assets/correction.png" alt="Correction example" style="max-width: 100%; border-radius: 15px;"/>
-          </div>
-        </n-collapse-item>
-        <n-collapse-item title="Rotating digits  (↕)" name="2">
-          <div>
-            When a rotation is detected for a digit, the last accepted value for that digit will be used (marked blue).
-            In case a higher order digit increased, the rotating digit will be set to 0.
-          </div>
-        </n-collapse-item>
-        <n-collapse-item title="Negative correction" name="3">
-          <div>
-            When negative corrections are enabled, the algorithm will accept a slightly lower reading if the previous value looked unreliable but the new prediction is confident.
-            After that, it relaxes the acceptance rules for subsequent digits so the full corrected reading can be reconstructed.<br><br>
-            <img src="@/assets/negative_correction.png" alt="neg. correction example" style="max-width: 100%; border-radius: 15px;"/>
-          </div>
-        </n-collapse-item>
-        <n-collapse-item title="Rejected results" name="4">
-          <div>
-            When no valid reading can be reconstructed from the predicted digits or the flow rate exceeds the maximum allowed flow rate,
-            the entire evaluation is rejected.
-          </div>
-        </n-collapse-item>
-      </n-collapse>
-    </div>
-  </n-flex>
+  <template v-else>
+    <n-grid cols="12">
+      <n-gi span="2" >
+        <MeterDetails
+          :data="data"
+          :settings="settings"
+          :id="id"
+          :downloadingDataset="downloadingDataset"
+          @resetToSetup="resetToSetup"
+          @deleteMeter="deleteMeter"
+          @downloadDataset="downloadDataset"
+          @deleteDataset="deleteDataset"
+        />
+      </n-gi>
+      <n-gi span="7" style="padding-left: 20px; padding-right: 10px;" v-if="evaluations !== null">
+        <EvaluationResultList :evaluations="evaluations" :name="id" @load-more="loadMoreEvaluations"/>
+      </n-gi>
+      <n-gi span="3" style="max-width: 500px;">
+        <MeterCharts :history="history" />
+      </n-gi>
+    </n-grid>
+  </template>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import router from '@/router';
-import ApexChart from 'vue3-apexcharts';
 import EvaluationResultList from "@/components/EvaluationResultList.vue";
-import {NFlex, NCard, NButton, NPopconfirm, NList, NListItem, NThing, NCollapse, NCollapseItem, NIcon} from "naive-ui";
-import { DeleteForeverFilled } from '@vicons/material';
-import WifiStatus from "@/components/WifiStatus.vue";
+import MeterDetails from "@/components/MeterDetails.vue";
+import MeterCharts from "@/components/MeterCharts.vue";
+import {NFlex, NButton, NGrid, NGi, NTabs, NTabPane} from "naive-ui";
 import { useWatermeterStore } from '@/stores/watermeterStore';
 import { storeToRefs } from 'pinia';
 
@@ -167,6 +79,20 @@ const { lastPicture: data, evaluations, history, settings } = storeToRefs(store)
 
 const loading = ref(false);
 const downloadingDataset = ref(false);
+const isMobile = ref(window.innerWidth < 1000);
+
+const updateWidth = () => {
+  isMobile.value = window.innerWidth < 800;
+};
+
+onMounted(() => {
+  window.addEventListener('resize', updateWidth);
+  loadMeter();
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateWidth);
+});
 
 const host = import.meta.env.VITE_HOST;
 
@@ -186,93 +112,6 @@ const loadMoreEvaluations = async () => {
   if (!evaluations.value || evaluations.value.length === 0) return;
   const lastId = evaluations.value[evaluations.value.length - 1].id;
   await store.fetchEvaluations(id, 10, lastId);
-};
-
-onMounted(() => {
-  loadMeter();
-});
-
-const series = computed(() => {
-  if (history.value) {
-    return [
-      {
-        name: 'Consumption m³',
-        data: history.value.history.map((item) => [new Date(item[1]), item[0] / 1000])
-      }
-    ];
-  } else {
-    return [];
-  }
-});
-
-const seriesConf = computed(() => {
-  if (history.value) {
-    return [
-      {
-        name: 'Confidence in %',
-        data: history.value.history.map((item) => [new Date(item[1]), item[2] * 100])
-      }
-    ];
-  } else {
-    return [];
-  }
-});
-
-const options = {
-  theme: { mode: 'dark' },
-  title: {
-    text: 'Consumption',
-  },
-  chart: {
-    type: 'line',
-    zoom: { enabled: true },
-    background: '#00000000',
-  },
-  xaxis: {
-    type: "datetime",
-    labels: {
-      rotate: -30, // Less rotation for compactness
-      format: "dd MMM HH:mm", // Shorter date format
-    },
-    tickAmount: 5, // Reduces number of ticks for compactness
-  },
-  yaxis: {
-    title: {text: 'Consumption m³'},
-    labels: {
-    },
-  },
-  stroke: { curve: 'smooth' },
-  tooltip: {
-    x: { format: 'dd MMM HH:mm' },
-  }
-};
-
-const optionsConf = {
-  theme: { mode: 'dark' },
-  title: {
-    text: 'Confidence',
-  },
-  chart: {
-    type: 'line',
-    zoom: { enabled: true },
-    background: '#00000000',
-  },
-  xaxis: {
-    type: "datetime",
-    labels: {
-      rotate: -30, // Less rotation for compactness
-      format: "dd MMM HH:mm", // Shorter date format
-    },
-    tickAmount: 5, // Reduces number of ticks for compactness
-  },
-  yaxis: {
-    title: {text: 'Confidence %'},
-    labels: { formatter: (value) => value.toFixed(1) + '%' }
-  },
-  stroke: { curve: 'smooth' },
-  tooltip: {
-    x: { format: 'dd MMM HH:mm' },
-  }
 };
 
 const deleteMeter = async () => {
@@ -346,9 +185,6 @@ const deleteDataset = async () => {
 </script>
 
 <style scoped>
-.rotated {
-  transform: rotate(180deg);
-}
 .bg {
   background-color: rgba(240, 240, 240, 0.1);
   padding: 20px;

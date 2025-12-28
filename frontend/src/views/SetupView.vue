@@ -11,10 +11,10 @@
   <n-steps :current="currentlyFocusedStep" :vertical="narrowScreen">
     <n-step
       title="Segmentation"
-      style="max-width: 500px; cursor: pointer;"
-      @click="() => {if (currentlyFocusedStep != 1 && currentStep > 0) {currentlyFocusedStep = 1;}}"
+      style="max-width: 350px; cursor: pointer;"
+      @click="() => {if (currentlyFocusedStep !== 1 && currentStep > 0) {currentlyFocusedStep = 1;}}"
     >
-      <div v-if="(narrowScreen && currentlyFocusedStep == 1) || (!narrowScreen)">
+      <div v-if="(narrowScreen && currentlyFocusedStep === 1) || (!narrowScreen)">
         <SegmentationConfigurator
             :last-picture="lastPicture"
             :extended-last-digit="extendedLastDigit"
@@ -30,19 +30,30 @@
             @click="(e) => e.stopPropagation()"
         />
         <br>
-        <n-alert title="Example" type="info">
-          <img src="@/assets/example_segmentation.png" alt="Example segmentation" style="max-width: 100%"/>
-            <li>Numbers should be entirely visible</li>
-            <li>One number per segement</li>
-        </n-alert>
+        <n-tooltip trigger="hover" placement="bottom">
+          <template #trigger>
+            <n-button circle type="info" ghost quaternary>
+              <template #icon>
+                <n-icon><HelpOutlineFilled /></n-icon>
+              </template>
+            </n-button>
+          </template>
+          <div style="max-width: 300px">
+            <img src="@/assets/example_segmentation.png" alt="Example segmentation" style="max-width: 100%"/>
+            <ul>
+              <li>Numbers should be entirely visible</li>
+              <li>One number per segement</li>
+            </ul>
+          </div>
+        </n-tooltip>
       </div>
     </n-step>
     <n-step
       title="Threshold Extraction"
-      style="max-width: 600px; cursor: pointer;"
-      @click="() => {if (currentlyFocusedStep != 2  && currentStep > 1) {currentlyFocusedStep = 2;}}"
+      style="max-width: 500px; cursor: pointer;"
+      @click="() => {if (currentlyFocusedStep !== 2  && currentStep > 1) {currentlyFocusedStep = 2;}}"
     >
-      <div v-if="(narrowScreen && currentlyFocusedStep == 2) || (!narrowScreen && currentStep > 1)">
+      <div v-if="(narrowScreen && currentlyFocusedStep === 2) || (!narrowScreen && currentStep > 1)">
         <ThresholdPicker
             :evaluation="evaluation"
             :run="tresholdedImages[tresholdedImages.length-1]"
@@ -56,22 +67,33 @@
             @click="(e) => e.stopPropagation()"
         />
         <br>
-        <n-alert title="Example" type="info">
-          <img src="@/assets/example_thresholds.png" alt="Example segmentation" style="max-width: 100%"/>
-          <li>Select thresholds to extract numbers</li>
-          <li>Numbers should be clearly visible</li>
-          <li>Use the "evaluate" button to test the values</li>
-          <li>Use "extraction padding" to remove as much artifacts as possible</li>
-        </n-alert>
+        <n-tooltip trigger="hover" placement="bottom">
+          <template #trigger>
+            <n-button circle type="info" ghost quaternary>
+              <template #icon>
+                <n-icon><HelpOutlineFilled /></n-icon>
+              </template>
+            </n-button>
+          </template>
+          <div style="max-width: 300px">
+            <img src="@/assets/example_thresholds.png" alt="Example segmentation" style="max-width: 100%"/>
+            <ul>
+              <li>Select thresholds to extract numbers</li>
+              <li>Numbers should be clearly visible</li>
+              <li>Use the "evaluate" button to test the values</li>
+              <li>Use "extraction padding" to remove as much artifacts as possible</li>
+            </ul>
+          </div>
+        </n-tooltip>
       </div>
     </n-step>
     <n-step
       title="Evaluation Preview"
       v-if="lastPicture"
       style="max-width: 620px; cursor: pointer;"
-      @click="() => {if (currentlyFocusedStep != 3 && currentStep > 2) {currentlyFocusedStep = 3;}}"
+      @click="() => {if (currentlyFocusedStep !== 3 && currentStep > 2) {currentlyFocusedStep = 3;}}"
     >
-      <div v-if="(narrowScreen && currentlyFocusedStep == 3) || (!narrowScreen && currentStep > 2)">
+      <div v-if="(narrowScreen && currentlyFocusedStep === 3) || (!narrowScreen && currentStep > 2)">
         <EvaluationConfigurator
             :evaluation="evaluation"
             :max-flow-rate="maxFlowRate" :loading="loading"
@@ -86,11 +108,22 @@
             @click="(e) => e.stopPropagation()"
         />
          <br>
-        <n-alert title="Info" type="info">
-          <li>Check the values the model extracted</li>
-          <li>Reflections and uneven lighting can cause issues</li>
-          <li>Manually enter the correct value without a decimal point or leading zeros</li>
-        </n-alert>
+        <n-tooltip trigger="hover" placement="bottom">
+          <template #trigger>
+            <n-button circle type="info" ghost quaternary>
+              <template #icon>
+                <n-icon><HelpOutlineFilled /></n-icon>
+              </template>
+            </n-button>
+          </template>
+          <div style="max-width: 300px">
+            <ul>
+              <li>Check the values the model extracted</li>
+              <li>Reflections and uneven lighting can cause issues</li>
+              <li>Manually enter the correct value without a decimal point or leading zeros</li>
+            </ul>
+          </div>
+        </n-tooltip>
       </div>
     </n-step>
   </n-steps>
@@ -98,8 +131,9 @@
 </template>
 
 <script setup>
-import {onMounted, computed, ref, watch} from 'vue';
-import { NSteps, NStep, NButton, NAlert, NFlex, NH2 } from 'naive-ui';
+import {onMounted, computed, ref} from 'vue';
+import { NSteps, NStep, NButton, NFlex, NH2, NTooltip, NIcon } from 'naive-ui';
+import { HelpOutlineFilled } from '@vicons/material';
 import { useRoute } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import { useWatermeterStore } from '@/stores/watermeterStore';

@@ -4,8 +4,8 @@
       <n-empty description="Waiting for the first images...">
       </n-empty>
     </div>
-    <template v-else>
-      <div v-for="[i, evaluation] in evaluations.entries()" :key="i" :class="{outdated: evaluation.outdated}">
+    <n-flex v-else justify="center">
+      <div v-for="[i, evaluation] in evaluations.entries()" :key="i" :class="{outdated: evaluation.outdated, item: true}">
         <n-flex :class="{ redbg: evaluation.result == null, econtainer: true }">
           <table>
             <tbody>
@@ -115,10 +115,10 @@
           </table>
         </n-flex>
       </div>
-      <div style="display: flex; justify-content: center; margin-top: 10px;">
+      <div style="display: flex; justify-content: center; margin-top: 10px; width: 100%;">
         <n-button @click="emit('loadMore')">Load more</n-button>
       </div>
-    </template>
+    </n-flex>
   </div>
 </template>
 
@@ -220,8 +220,6 @@ const openUploadDialog = (colored, thresholded, name, values) => {
   background-color: rgba(255, 0, 0, 0.1);
 }
 .bglight {
-  background-color: rgba(240, 240, 240, 0.1);
-  padding: 10px;
 }
 
 .outdated {

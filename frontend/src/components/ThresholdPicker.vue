@@ -3,23 +3,24 @@
     <n-flex>
       <div>
         <n-flex justify="space-around" size="large" v-if="evaluation">
-          <img class="digit" v-for="[i,base64] in evaluation['colored_digits'].slice(0,-3).entries()" :src="'data:image/png;base64,' + base64" :key="i+'a'" alt="D" style="height: 50px"/>
+          <img class="digit" v-for="[i,base64] in evaluation['colored_digits'].slice(0,-3).entries()" :src="'data:image/png;base64,' + base64" :key="i+'a'" alt="D" />
         </n-flex>
         <br>
         <n-flex justify="space-around" size="large" v-if="tresholdedImages">
-          <img class="digit" v-for="[i,base64] in tresholdedImages.slice(0,-3).entries()" :src="'data:image/png;base64,' + base64" :key="i+'b'" alt="Watermeter" style="height: 50px" />
+          <img class="digit" v-for="[i,base64] in tresholdedImages.slice(0,-3).entries()" :src="'data:image/png;base64,' + base64" :key="i+'b'" alt="Watermeter" />
         </n-flex>
         <br>
         <n-slider :value="currentThreshold" @update:value="updateThreshold" range :step="1" :max="255" @mouseup="sendUpdate" style="max-width: 150px;" :disabled="loading"/>
         {{currentThreshold[0]}} - {{currentThreshold[1]}}
       </div>
+      <n-divider vertical />
       <div>
         <n-flex justify="space-around" size="large" v-if="evaluation">
-          <img class="digit" v-for="[i,base64] in evaluation['colored_digits'].slice(-3).entries()" :src="'data:image/png;base64,' + base64" :key="i+'a'" alt="D" style="height: 50px"/>
+          <img class="digit" v-for="[i,base64] in evaluation['colored_digits'].slice(-3).entries()" :src="'data:image/png;base64,' + base64" :key="i+'a'" alt="D" />
         </n-flex>
         <br>
         <n-flex justify="space-around" size="large" v-if="tresholdedImages">
-          <img class="digit" v-for="[i,base64] in tresholdedImages.slice(-3).entries()" :src="'data:image/png;base64,' + base64" :key="i+'b'" alt="Watermeter" style="height: 50px"/>
+          <img class="digit" v-for="[i,base64] in tresholdedImages.slice(-3).entries()" :src="'data:image/png;base64,' + base64" :key="i+'b'" alt="Watermeter" />
         </n-flex>
         <br>
         <n-slider :value="currentThresholdLast" @update:value="updateThresholdLast" range :step="1" :max="255" @mouseup="sendUpdate" style="max-width: 150px;" :disabled="loading"/>
@@ -143,5 +144,8 @@ async function thresholdImage(base64, threshold, islanding_padding = 0) {
 </script>
 
 <style scoped>
-
+.digit{
+  width: 18px;
+  height: auto;
+}
 </style>

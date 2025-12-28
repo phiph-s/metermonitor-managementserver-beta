@@ -11,20 +11,25 @@
       </n-flex>
       <n-flex justify="space-around" size="large">
         <span class="confidence google-sans-code" v-for="[i, digit] in evaluation['predictions'].entries()" :key="i + 'e'" :style="{color: getColor(digit[0][1])}">
-          {{ (digit[0][1] * 100).toFixed(1) }}
+          {{ (digit[0][1] * 100).toFixed(0) }}
         </span>
       </n-flex><br>
       <n-flex align="center">
         <n-badge
+            v-if="randomExamples && randomExamples.length === 10"
           :value="loading ? '' : `${averageConfidence}%`"
           :processing="loading"
           :type="getBadgeType(averageConfidence)"
           :show="randomExamples && randomExamples.length > 0"
         >
         </n-badge>
-        <span style="font-weight: 500;" v-if="randomExamples && randomExamples.length > 0">
+        <span style="font-weight: 500;" v-if="randomExamples && randomExamples.length === 10">
           Average Confidence on digits from {{ randomExamples ? randomExamples.length : 0 }} historical evaluations.
         </span>
+        <template v-else-if="randomExamples && randomExamples.length > 0" >
+          Benchmarking on 10 past evaluations...
+          <n-progress type="line" :percentage="randomExamples.length * 10"></n-progress>
+        </template>
         <span v-else>
           Press "Apply" to evaluate and run the benchmark.
         </span>
@@ -101,7 +106,7 @@ import {
   NCard,
   NButton,
   NInputNumber,
-  NDivider,
+  NProgress,
   NIcon,
   NGrid,
   NGi,
@@ -240,8 +245,7 @@ function getColor(value) {
 
 <style scoped>
 .digit{
-  margin: 3px;
-  width: 24px;
+  width: 18px;
   height: auto;
 }
 
@@ -252,7 +256,6 @@ function getColor(value) {
 }
 
 .prediction{
-  margin: 3px;
   font-size: 20px;
 }
 
@@ -263,7 +266,6 @@ function getColor(value) {
 }
 
 .confidence{
-  margin: 3px;
   font-size: 10px;
 }
 
