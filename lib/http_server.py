@@ -14,7 +14,7 @@ import base64
 import sqlite3
 import zlib
 import re
-from typing import List
+from typing import List, Optional
 
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse, FileResponse, StreamingResponse
@@ -92,6 +92,7 @@ def prepare_setup_app(config, lifespan):
         shrink_last_3: bool
         extended_last_digit: bool
         max_flow_rate: float
+        conf_threshold: float
 
     class SettingsUpdateRequest(BaseModel):
         threshold_low: int
@@ -104,6 +105,7 @@ def prepare_setup_app(config, lifespan):
         shrink_last_3: bool
         extended_last_digit: bool
         max_flow_rate: float
+        conf_threshold: Optional[float] = None
 
     class EvalRequest(BaseModel):
         eval: str
@@ -385,7 +387,7 @@ def prepare_setup_app(config, lifespan):
     @app.get("/api/watermeters/{name}/settings", dependencies=[Depends(authenticate)])
     def get_settings(name: str):
         cursor = db_connection().cursor()
-        cursor.execute("SELECT threshold_low, threshold_high, threshold_last_low, threshold_last_high, islanding_padding, segments, shrink_last_3, extended_last_digit, max_flow_rate, rotated_180 FROM settings WHERE name = ?", (name,))
+        cursor.execute("SELECT threshold_low, threshold_high, threshold_last_low, threshold_last_high, islanding_padding, segments, shrink_last_3, extended_last_digit, max_flow_rate, rotated_180, conf_threshold FROM settings WHERE name = ?", (name,))
         row = cursor.fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Thresholds not found")
@@ -399,7 +401,8 @@ def prepare_setup_app(config, lifespan):
             "shrink_last_3": row[6],
             "extended_last_digit": row[7],
             "max_flow_rate": row[8],
-            "rotated_180": row[9]
+            "rotated_180": row[9],
+            "conf_threshold": row[10]
         }
 
     @app.post("/api/settings", dependencies=[Depends(authenticate)])
@@ -408,14 +411,14 @@ def prepare_setup_app(config, lifespan):
         cursor = db.cursor()
         cursor.execute(
             """
-            INSERT INTO settings (name, threshold_low, threshold_high, threshold_last_low, threshold_last_high, islanding_padding, segments, shrink_last_3, extended_last_digit, max_flow_rate, rotated_180) 
-            VALUES (?, ?, ?, ?,?,?, ?, ? , ?, ?, ?) ON CONFLICT(name) DO UPDATE SET 
+            INSERT INTO settings (name, threshold_low, threshold_high, threshold_last_low, threshold_last_high, islanding_padding, segments, shrink_last_3, extended_last_digit, max_flow_rate, rotated_180, conf_threshold) 
+            VALUES (?, ?, ?, ?,?,?, ?, ? , ?, ?, ?, ?) ON CONFLICT(name) DO UPDATE SET 
             threshold_low=excluded.threshold_low, threshold_high=excluded.threshold_high, threshold_last_low=excluded.threshold_last_low, threshold_last_high=excluded.threshold_last_high,
             islanding_padding=excluded.islanding_padding,
-            segments=excluded.segments, shrink_last_3=excluded.shrink_last_3, extended_last_digit=excluded.extended_last_digit, max_flow_rate=excluded.max_flow_rate, rotated_180=excluded.rotated_180
+            segments=excluded.segments, shrink_last_3=excluded.shrink_last_3, extended_last_digit=excluded.extended_last_digit, max_flow_rate=excluded.max_flow_rate, rotated_180=excluded.rotated_180, conf_threshold=excluded.conf_threshold
             """,
             (settings.name, settings.threshold_low, settings.threshold_high, settings.threshold_last_low, settings.threshold_last_high, settings.islanding_padding,
-             settings.segments, settings.shrink_last_3, settings.extended_last_digit, settings.max_flow_rate, settings.rotated_180)
+             settings.segments, settings.shrink_last_3, settings.extended_last_digit, settings.max_flow_rate, settings.rotated_180, settings.conf_threshold)
         )
         db.commit()
         return {"message": "Thresholds set", "name": settings.name}
@@ -426,14 +429,14 @@ def prepare_setup_app(config, lifespan):
         cursor = db.cursor()
         cursor.execute(
             """
-            INSERT INTO settings (name, threshold_low, threshold_high, threshold_last_low, threshold_last_high, islanding_padding, segments, shrink_last_3, extended_last_digit, max_flow_rate, rotated_180) 
-            VALUES (?, ?, ?, ?,?,?, ?, ? , ?, ?, ?) ON CONFLICT(name) DO UPDATE SET 
+            INSERT INTO settings (name, threshold_low, threshold_high, threshold_last_low, threshold_last_high, islanding_padding, segments, shrink_last_3, extended_last_digit, max_flow_rate, rotated_180, conf_threshold) 
+            VALUES (?, ?, ?, ?,?,?, ?, ? , ?, ?, ?, ?) ON CONFLICT(name) DO UPDATE SET 
             threshold_low=excluded.threshold_low, threshold_high=excluded.threshold_high, threshold_last_low=excluded.threshold_last_low, threshold_last_high=excluded.threshold_last_high,
             islanding_padding=excluded.islanding_padding,
-            segments=excluded.segments, shrink_last_3=excluded.shrink_last_3, extended_last_digit=excluded.extended_last_digit, max_flow_rate=excluded.max_flow_rate, rotated_180=excluded.rotated_180
+            segments=excluded.segments, shrink_last_3=excluded.shrink_last_3, extended_last_digit=excluded.extended_last_digit, max_flow_rate=excluded.max_flow_rate, rotated_180=excluded.rotated_180, conf_threshold=excluded.conf_threshold
             """,
             (name, settings.threshold_low, settings.threshold_high, settings.threshold_last_low, settings.threshold_last_high, settings.islanding_padding,
-             settings.segments, settings.shrink_last_3, settings.extended_last_digit, settings.max_flow_rate, settings.rotated_180)
+             settings.segments, settings.shrink_last_3, settings.extended_last_digit, settings.max_flow_rate, settings.rotated_180, settings.conf_threshold)
         )
         db.commit()
         return {"message": "Settings updated", "name": name}
@@ -477,7 +480,7 @@ def prepare_setup_app(config, lifespan):
 
         # Build query with optional pagination
         query = """
-            SELECT colored_digits, th_digits, predictions, timestamp, result, total_confidence, outdated, id
+            SELECT colored_digits, th_digits, predictions, timestamp, result, total_confidence, outdated, id, denied_digits
             FROM evaluations
             WHERE name = ?
         """
@@ -502,7 +505,8 @@ def prepare_setup_app(config, lifespan):
             "timestamp": row[3],
             "result": row[4],
             "total_confidence": row[5],
-            "outdated": row[6]
+            "outdated": row[6],
+            "denied_digits": json.loads(row[8]) if row[8] else None
         } for row in cursor.fetchall()]}
 
     # POST endpoint for adding an evaluation

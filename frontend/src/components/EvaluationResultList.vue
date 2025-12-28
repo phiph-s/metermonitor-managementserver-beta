@@ -78,7 +78,7 @@
                   :key="i + 'e'"
                   style="text-align: center;"
                 >
-                  <span class="confidence small" :style="{ color: getColor(digit[0][1]) }">
+                  <span class="confidence small" :style="{ color: getColor(digit[0][1]), textDecoration: evaluation.denied_digits[i]? 'line-through' : 'none' }">
                     {{ Math.round(digit[0][1] * 100) }}
                   </span>
                 </td>
