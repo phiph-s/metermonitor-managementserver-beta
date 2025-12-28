@@ -94,6 +94,7 @@
                 >
                   <span
                     :class="{
+                      'google-sans-code': true,
                       adjustment: true,
                       red: digit !== evaluation.predictions[i][0][0],
                       blue: evaluation.predictions[i][0][0] === 'r',

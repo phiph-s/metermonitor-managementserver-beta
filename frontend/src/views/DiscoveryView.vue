@@ -42,7 +42,16 @@
   <template v-if="waterMeters.length > 0">
     <n-h2>Watermeters</n-h2>
     <n-flex>
-        <WaterMeterCard v-for="item in waterMeters" :key="item.id" :last_updated="item[1]" :meter_name="item[0]" :setup="false" :rssi="item[2]"/>
+        <WaterMeterCard
+            v-for="item in waterMeters"
+            :key="item.id"
+            :last_updated="item[1]"
+            :meter_name="item[0]"
+            :setup="false"
+            :rssi="item[2]"
+            :last_digits="item[4]"
+            :last_result="item[3]"
+        />
     </n-flex>
   </template>
 </template>

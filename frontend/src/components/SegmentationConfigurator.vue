@@ -58,10 +58,10 @@
       </n-tooltip>
     </n-checkbox><br>
     <template #action v-if="evaluation">
-      <n-flex justify="space-around" size="large">
-        <img class="digit" v-for="base64 in evaluation['colored_digits']" :src="'data:image/png;base64,' + base64" :key="base64" alt="D"/>
+      <n-flex justify="space-around" :size="[0,0]">
+        <img :style="`width:calc(350px / ${evaluation['colored_digits'].length});`" class="digit" v-for="base64 in evaluation['colored_digits']" :src="'data:image/png;base64,' + base64" :key="base64" alt="D"/>
       </n-flex><br>
-      <n-flex justify="end" size="large">
+      <n-flex justify="end">
         <n-button
             @click="emits('next')"
             round

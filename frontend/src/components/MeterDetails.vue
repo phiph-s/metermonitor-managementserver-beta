@@ -8,7 +8,6 @@
         <img
           :src="'data:image/' + data.picture.format + ';base64,' + data.picture.data_bbox"
           alt="Watermeter"
-          :class="{ rotated: settings.rotated_180 }"
         />
       </template>
     </n-card>

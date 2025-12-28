@@ -282,8 +282,23 @@ def prepare_setup_app(config, lifespan):
     @app.get("/api/watermeters", dependencies=[Depends(authenticate)])
     def get_watermeters():
         cursor = db_connection().cursor()
-        cursor.execute("SELECT name, picture_timestamp, wifi_rssi FROM watermeters WHERE setup = 1")
-        return {"watermeters": [row for row in cursor.fetchall()]}
+        cursor.execute("""
+            SELECT 
+                w.name, 
+                w.picture_timestamp, 
+                w.wifi_rssi,
+                (SELECT value FROM history h WHERE h.name = w.name ORDER BY timestamp DESC LIMIT 1),
+                (SELECT th_digits_inverted FROM evaluations e WHERE e.name = w.name ORDER BY id DESC LIMIT 1)
+            FROM watermeters w 
+            WHERE w.setup = 1
+        """)
+
+        result = []
+        for row in cursor.fetchall():
+            th_digits = json.loads(row[4]) if row[4] else None
+            result.append((row[0], row[1], row[2], row[3], th_digits))
+
+        return {"watermeters": result}
 
     @app.post("/api/setup/{name}/finish", dependencies=[Depends(authenticate)])
     def post_setup_finished(name: str, data: SetupData):

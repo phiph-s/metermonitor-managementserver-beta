@@ -2,7 +2,7 @@
   <template v-if="evaluation">
     <n-card>
       <n-flex justify="space-around" size="large">
-        <img class="digit" v-for="[i,base64] in evaluation['th_digits'].entries()" :key="i + 'c'" :src="'data:image/png;base64,' + base64" alt="D"/>
+        <img :style="`width:calc(250px / ${evaluation['colored_digits'].length});`" class="digit th" v-for="[i,base64] in evaluation['th_digits'].entries()" :key="i + 'c'" :src="'data:image/png;base64,' + base64" alt="D"/>
       </n-flex>
       <n-flex justify="space-around" size="large">
         <span class="prediction google-sans-code" v-for="[i, digit] in evaluation['predictions'].entries()" :key="i + 'd'">
@@ -47,7 +47,7 @@
                 />
                 <br>
                 <span
-                    class="prediction_small"
+                    class="prediction_small google-sans-code"
                     :style="{color: getColor(example['predictions'][i][0][1])}"
                     :title="`${example['predictions'][i][0][0]}: ${(example['predictions'][i][0][1]*100).toFixed(1)}\n${example['predictions'][i][1][0]}: ${(example['predictions'][i][1][1]*100).toFixed(1)}\n${example['predictions'][i][2][0]}: ${(example['predictions'][i][2][1]*100).toFixed(1)}`"
                 >
@@ -89,6 +89,7 @@
         <n-flex justify="end" size="large">
           <n-button
               @click="finishSetup"
+              type="success"
               round
               :disabled="loading || useSetupStore().runningBenchmark"
               :loading="loading || useSetupStore().runningBenchmark"
@@ -132,7 +133,10 @@ const props = defineProps([
     'randomExamples'
 ]);
 
-const initialValue = ref(0);
+const initialValue = ref(props.evaluation['predictions'].reduce((acc, digit) => {
+  const predictedDigit = digit[0][0];
+  return acc * 10 + (predictedDigit === 'r' ? 0 : parseInt(predictedDigit));
+}, 0));
 
 const dialog = useDialog();
 const host = import.meta.env.VITE_HOST;
@@ -258,7 +262,7 @@ function getColor(value) {
 }
 
 .prediction{
-  font-size: 20px;
+  font-size: 30px;
 }
 
 .prediction_small{
@@ -273,6 +277,9 @@ function getColor(value) {
 
 .grid-container{
   text-align: center;
-  line-height: 0.9;
+  line-height: 0.95;
+}
+.th {
+  border: 1px solid rgba(255, 255, 255, 0.16);
 }
 </style>

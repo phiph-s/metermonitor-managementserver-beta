@@ -7,11 +7,11 @@
     <img src="@/assets/logo.png" alt="Logo" style="max-width: 100px; margin-left: 20px;"/>
     <n-button :loading="loading" @click="() => setupStore.getData(id)" round size="large" style="margin-left: 20px;">Refresh</n-button>
   </n-flex>
-    <n-h2>Setup for {{ id }}{{currentlyFocusedStep}}</n-h2>
+    <n-h2>Setup for {{ id }}</n-h2>
   <n-steps :current="currentlyFocusedStep" :vertical="narrowScreen">
     <n-step
       title="Segmentation"
-      style="max-width: 350px; cursor: pointer;"
+      style="max-width: 500px; cursor: pointer;"
       @click="() => {if (currentlyFocusedStep !== 1 && currentStep > 0) {currentlyFocusedStep = 1;}}"
     >
       <div v-if="(narrowScreen && currentlyFocusedStep === 1) || (!narrowScreen)">
@@ -90,7 +90,7 @@
     <n-step
       title="Evaluation Preview"
       v-if="lastPicture"
-      style="max-width: 620px; cursor: pointer;"
+      style="max-width: 500px; cursor: pointer;"
       @click="() => {if (currentlyFocusedStep !== 3 && currentStep > 2) {currentlyFocusedStep = 3;}}"
     >
       <div v-if="(narrowScreen && currentlyFocusedStep === 3) || (!narrowScreen && currentStep > 2)">
