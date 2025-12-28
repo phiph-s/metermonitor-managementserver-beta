@@ -27,6 +27,7 @@ def correct_value(db_file:str, name: str, new_eval, allow_negative_correction = 
             new_time = datetime.now()
 
         new_results = new_eval[2]
+        denied_digits = new_eval[4]
 
         if last_time >= new_time:
             print(f"[CorrectionAlg ({name})] Time difference to last message is negative, assuming current time for correction")
@@ -50,7 +51,7 @@ def correct_value(db_file:str, name: str, new_eval, allow_negative_correction = 
                 tempConfidence = totalConfidence
 
                 # replacement of the rotation class
-                if prediction[0] == 'r':
+                if prediction[0] == 'r' or denied_digits[i]:
                     # check if the digit before has changed upwards, set the digit to 0
                     if i > 0 and int(correctedValue[-1]) > int(last_value[i-1]):
                         tempValue += '0'

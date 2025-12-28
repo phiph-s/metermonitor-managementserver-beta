@@ -74,6 +74,9 @@
           <n-list-item>
             <n-thing title="Max. flow rate" :title-extra="settings.max_flow_rate + ' m³/h'" />
           </n-list-item>
+          <n-list-item>
+            <n-thing title="Conf. threshold" :title-extra="settings.conf_threshold + ' %d'" />
+          </n-list-item>
         </n-list>
       </n-card>
       <template v-if="data && data.dataset_present">

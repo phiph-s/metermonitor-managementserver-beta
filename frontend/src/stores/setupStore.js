@@ -10,6 +10,7 @@ export const useSetupStore = defineStore('setup', () => {
   const noBoundingBox = ref(false);
   const loading = ref(false);
   const loadingCancelled = ref(false);
+  const runningBenchmark = ref(false);
 
   // Actions
   const nextStep = (step) => {
@@ -46,6 +47,13 @@ export const useSetupStore = defineStore('setup', () => {
     watermeterStore.settings.max_flow_rate = value;
     await watermeterStore.updateSettings(meterId);
   };
+
+  const updateConfThreshold = async (value, meterId) => {
+    const watermeterStore = useWatermeterStore();
+
+    watermeterStore.settings.conf_threshold = value;
+    await watermeterStore.updateSettings(meterId);
+  }
 
   const updateSegmentationSettings = async (data, meterId) => {
     const watermeterStore = useWatermeterStore();
@@ -100,6 +108,7 @@ export const useSetupStore = defineStore('setup', () => {
     // Clear existing examples and reset cancellation flag
     randomExamples.value = [];
     loadingCancelled.value = false;
+    runningBenchmark.value = true;
 
     try {
       for (let offset = 0; offset < amount; offset++) {
@@ -133,6 +142,8 @@ export const useSetupStore = defineStore('setup', () => {
       }
     } catch (e) {
       console.error('get_reevaluated_digits failed', e);
+    } finally {
+      runningBenchmark.value = false;
     }
   };
 
@@ -185,6 +196,7 @@ export const useSetupStore = defineStore('setup', () => {
     randomExamples,
     noBoundingBox,
     loading,
+    runningBenchmark,
     // Actions
     reset,
     redoDigitEval,
@@ -192,6 +204,7 @@ export const useSetupStore = defineStore('setup', () => {
     setLoading,
     updateThresholds,
     updateMaxFlow,
+    updateConfThreshold,
     updateSegmentationSettings,
     clearEvaluationExamples,
     reevaluate,

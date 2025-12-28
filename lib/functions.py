@@ -108,7 +108,7 @@ def reevaluate_latest_picture(db_file: str, name:str, meter_preditor, config, pu
         # Get current settings for the watermeter
         cursor.execute('''
                    SELECT threshold_low, threshold_high, threshold_last_low, threshold_last_high, islanding_padding,
-                    segments, shrink_last_3, extended_last_digit, max_flow_rate, rotated_180
+                    segments, shrink_last_3, extended_last_digit, max_flow_rate, rotated_180, conf_threshold
                    FROM settings
                    WHERE name = ?
                ''', (name,))
@@ -121,6 +121,7 @@ def reevaluate_latest_picture(db_file: str, name:str, meter_preditor, config, pu
         extended_last_digit = settings[7]
         max_flow_rate = settings[8]
         rotated_180 = settings[9]
+        conf_threshold = settings[10]
 
         # Get the target_brightness from the last history entry
         cursor.execute("SELECT target_brightness FROM history WHERE name = ? ORDER BY ROWID DESC LIMIT 1", (name,))
@@ -148,11 +149,19 @@ def reevaluate_latest_picture(db_file: str, name:str, meter_preditor, config, pu
             processed, digits = meter_preditor.apply_thresholds(digits, thresholds, thresholds_last, islanding_padding)
             prediction = meter_preditor.predict_digits(digits)
 
+        # check for each digit if its highest conf is above conf_threshold, otherwise mark it as denied
+        denied_digits = []
+        for digit_predictions in prediction:
+            if len(digit_predictions) == 0 or digit_predictions[0][1]*100 < conf_threshold:
+                denied_digits.append(True)
+            else:
+                denied_digits.append(False)
+
         # If the setup is finished, try to correct the value and save the result
         value = None
         confidence = 0
         if setup:
-            r = correct_value(db_file, name, [result, processed, prediction, timestamp], allow_negative_correction=config["allow_negative_correction"], max_flow_rate=max_flow_rate)
+            r = correct_value(db_file, name, [result, processed, prediction, timestamp, denied_digits], allow_negative_correction=config["allow_negative_correction"], max_flow_rate=max_flow_rate)
             if r is not None:
                 value, confidence = r
                 cursor.execute('''
@@ -223,8 +232,8 @@ def reevaluate_latest_picture(db_file: str, name:str, meter_preditor, config, pu
         else:
             cursor.execute('''
                            INSERT INTO evaluations
-                           (name, colored_digits, th_digits, predictions, timestamp, result, total_confidence)
-                           VALUES (?, ?, ?, ?, ?, ?, ?)
+                           (name, colored_digits, th_digits, predictions, timestamp, result, total_confidence, denied_digits)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                            ''', (
                                name,
                                json.dumps(result) if result is not None else None,
@@ -232,7 +241,8 @@ def reevaluate_latest_picture(db_file: str, name:str, meter_preditor, config, pu
                                json.dumps(prediction) if prediction is not None else None,
                                timestamp if isinstance(timestamp, str) and timestamp.strip() else None,
                                value if value is not None else None,
-                               float(confidence) if confidence is not None else None
+                               float(confidence) if confidence is not None else None,
+                               json.dumps(denied_digits)
                            ))
 
         # remove old evaluations

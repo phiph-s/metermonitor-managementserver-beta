@@ -96,7 +96,8 @@
                     :class="{
                       adjustment: true,
                       red: digit !== evaluation.predictions[i][0][0],
-                      blue: evaluation.predictions[i][0][0] === 'r'
+                      blue: evaluation.predictions[i][0][0] === 'r',
+                      orange: evaluation.denied_digits[i] && evaluation.predictions[i][0][0] != digit
                     }"
                   >
 
@@ -197,6 +198,10 @@ const openUploadDialog = (colored, thresholded, name, values) => {
 
 .blue {
   color: dodgerblue;
+}
+
+.orange {
+  color: orange;
 }
 
 .confidence {

@@ -22,6 +22,7 @@
             :segments="segments"
             :rotated180="rotated180"
             :evaluation="evaluation"
+            :timestamp="lastPicture ? lastPicture.picture.timestamp : ''"
             :loading="loading"
             :no-bounding-box="noBoundingBox"
             @update="(newSettings) => setupStore.updateSegmentationSettings(newSettings, id)"
@@ -69,10 +70,12 @@
         <EvaluationConfigurator
             :evaluation="evaluation"
             :max-flow-rate="maxFlowRate" :loading="loading"
-            @update="(data) => setupStore.updateMaxFlow(data, id)"
+            @updateMaxFlow="(data) => setupStore.updateMaxFlow(data, id)"
+            @updateConfThreshold="(data) => setupStore.updateConfThreshold(data, id)"
             @set-loading="setupStore.setLoading"
             @request-random-example="() => setupStore.requestReevaluatedDigits(id)"
             :meterid="id"
+            :confidence-threshold="confThreshold"
             :timestamp="lastPicture.picture.timestamp"
             :randomExamples="randomExamples"
         />
@@ -118,6 +121,7 @@ const extendedLastDigit = computed(() => settings.value?.extended_last_digit || 
 const last3DigitsNarrow = computed(() => settings.value?.shrink_last_3 || false);
 const rotated180 = computed(() => settings.value?.rotated_180 || false);
 const maxFlowRate = computed(() => settings.value?.max_flow_rate || 0);
+const confThreshold = computed(() => settings.value?.conf_threshold);
 
 // Computed property for tresholdedImages (keeping backwards compatibility)
 const tresholdedImages = computed(() => {

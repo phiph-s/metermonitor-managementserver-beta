@@ -2,6 +2,7 @@
   <n-card>
     <template #cover>
       <img v-if="lastPicture" :src="'data:image/'+lastPicture.picture.format+';base64,' + lastPicture.picture.data_bbox" alt="Watermeter" />
+      <span style="color: rgba(255,255,255,0.3)">{{new Date(timestamp).toLocaleString()}}</span><br>
     </template>
     <br>
 
@@ -79,6 +80,7 @@ import {defineProps, defineEmits} from 'vue';
 const props = defineProps([
     'lastPicture',
     'segments',
+    'timestamp',
     'extendedLastDigit',
     'last3DigitsNarrow',
     'evaluation',

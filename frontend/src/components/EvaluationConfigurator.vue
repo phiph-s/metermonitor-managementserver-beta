@@ -53,17 +53,30 @@
           </n-grid>
         </n-collapse-item>
       </n-collapse>
-      <n-divider />
+    </n-card><br>
+    <n-card>
       <n-flex>
-        <div style="max-width: 45%">
+        <div style="max-width: 30%">
+            <n-tooltip>
+              <template #trigger>
+                Conf. threshold
+              </template>
+              <span>
+                Set a confidence threshold for accepting digit predictions.<br>
+                Digits with confidence below this value will be marked as uncertain.
+              </span>
+            </n-tooltip>
+          <n-input-number ref="confThreshInput" :value="confidenceThreshold" @update:value="(e) => {emit('update-conf-threshold', e); lastConfThresholdInput = e;}"
+                          :placeholder="`${Math.max(averageConfidence-20,0)}%`" :disabled="loading" />
+        </div>
+        <div style="max-width: 33%">
           Read initial value
           <n-input-number v-model:value="initialValue" placeholder="Readout" :disabled="loading" />
-          <span style="color: rgba(255,255,255,0.3)">{{new Date(timestamp).toLocaleString()}}</span><br>
         </div>
-        <div style="max-width: 45%">
+        <div style="max-width: 30%">
           Max. flow rate
           <n-input-number :value="maxFlowRate"
-                          @update:value="emit('update', $event)"
+                          @update:value="emit('update-max-flow', $event)"
                           placeholder="Flow rate" :disabled="loading" />
         </div>
       </n-flex>
@@ -72,8 +85,8 @@
           <n-button
               @click="finishSetup"
               round
-              :disabled="loading"
-              :loading="loading"
+              :disabled="loading || useSetupStore().runningBenchmark"
+              :loading="loading || useSetupStore().runningBenchmark"
           >Finish & save</n-button>
         </n-flex>
       </template>
@@ -83,16 +96,32 @@
 
 <script setup>
 import {defineProps, ref, defineEmits, computed} from 'vue';
-import {NFlex, NCard, NButton, NInputNumber, NDivider, NIcon, NGrid, NGi, NCollapse, NCollapseItem, NBadge, useDialog} from 'naive-ui';
+import {
+  NFlex,
+  NCard,
+  NButton,
+  NInputNumber,
+  NDivider,
+  NIcon,
+  NGrid,
+  NGi,
+  NCollapse,
+  NCollapseItem,
+  NBadge,
+  useDialog,
+  NTooltip, NTag
+} from 'naive-ui';
 import router from "@/router";
+import {useSetupStore} from "@/stores/setupStore";
 
-const emit = defineEmits(['update', 'set-loading', 'request-random-example']);
+const emit = defineEmits(['set-loading', 'request-random-example', 'update-max-flow', 'update-conf-threshold']);
 
 const props = defineProps([
     'meterid',
     'evaluation',
     'timestamp',
     'maxFlowRate',
+    'confidenceThreshold',
     'loading',
     'onSetLoading',
     'randomExamples'
@@ -102,6 +131,9 @@ const initialValue = ref(0);
 
 const dialog = useDialog();
 const host = import.meta.env.VITE_HOST;
+
+const confThreshInput = ref(null);
+const lastConfThresholdInput = ref(props.confidenceThreshold);
 
 // Calculate average confidence from random examples
 const averageConfidence = computed(() => {
@@ -153,6 +185,15 @@ const finishSetup = async () => {
   }
 
   try {
+
+    // if confThreshInput vlaue is null, set value to averageConfidence - 20
+    console.log(lastConfThresholdInput.value)
+    if (lastConfThresholdInput.value == null) {
+      const suggestedThreshold = Math.max(averageConfidence.value - 20, 0);
+      emit('update-conf-threshold', suggestedThreshold);
+      console.log('Suggested confidence threshold set to', suggestedThreshold);
+    }
+
     // post to /api/setup/{name}/finish
     const r = await fetch(host + 'api/setup/' + props.meterid + '/finish', {
       method: 'POST',

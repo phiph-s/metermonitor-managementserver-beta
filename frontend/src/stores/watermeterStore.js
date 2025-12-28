@@ -19,6 +19,7 @@ export const useWatermeterStore = defineStore('watermeter', () => {
     shrink_last_3: false,
     rotated_180: false,
     max_flow_rate: 1.0,
+    conf_threshold: null,
   });
 
   // Actions
@@ -68,6 +69,7 @@ export const useWatermeterStore = defineStore('watermeter', () => {
       shrink_last_3: data.shrink_last_3 === 1,
       rotated_180: data.rotated_180 === 1,
       max_flow_rate: data.max_flow_rate,
+      conf_threshold: data.conf_threshold
     });
 
     return data;
@@ -85,6 +87,7 @@ export const useWatermeterStore = defineStore('watermeter', () => {
       extended_last_digit: settings.extended_last_digit,
       shrink_last_3: settings.shrink_last_3,
       max_flow_rate: settings.max_flow_rate,
+      conf_threshold: settings.conf_threshold,
     };
 
     await apiService.put(`api/watermeters/${meterId}/settings`, payload);

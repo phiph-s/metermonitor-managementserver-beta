@@ -188,4 +188,39 @@ def run_migrations(db_file):
             ''')
             print("[MIGRATION] Added 'picture_data_bbox' column to 'watermeters' table")
 
+        # add settings column conf_threshold to settings table if it doesn't exist yet
+        cursor.execute("PRAGMA table_info(settings)")
+        columns = [info[1] for info in cursor.fetchall()]
+        if 'conf_threshold' not in columns:
+            cursor.execute('''
+                ALTER TABLE settings
+                ADD COLUMN conf_threshold REAL DEFAULT 0.5
+            ''')
+            print("[MIGRATION] Added 'conf_threshold' column to 'settings' table")
+
+        # add a column "denied_digits" to the evaluations table ([FALSE, FALSE, ...] as JSON string with length of digits as default)
+        cursor.execute("PRAGMA table_info(evaluations)")
+        columns = [info[1] for info in cursor.fetchall()]
+        if 'denied_digits' not in columns:
+            cursor.execute('''
+                ALTER TABLE evaluations
+                ADD COLUMN denied_digits TEXT
+            ''')
+            # set default value for existing rows
+            cursor.execute("SELECT name, th_digits FROM evaluations")
+            rows = cursor.fetchall()
+            for row in rows:
+                name = row["name"]
+                th_digits_json = row["th_digits"]
+                length = 0
+                try:
+                    th_digits = json.loads(th_digits_json) if th_digits_json else []
+                    length = len(th_digits)
+                except Exception:
+                    length = 0
+                denied_list = [False] * length
+                denied_json = json.dumps(denied_list)
+                cursor.execute("UPDATE evaluations SET denied_digits = ? WHERE name = ?", (denied_json, name))
+            print("[MIGRATION] Added 'denied_digits' column to 'evaluations' table and set default values")
+
 
