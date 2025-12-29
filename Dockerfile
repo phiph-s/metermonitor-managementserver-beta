@@ -3,42 +3,44 @@
 ########################
 # Frontend Build Stage #
 ########################
-FROM --platform=$BUILDPLATFORM node:18-alpine AS frontend-builder
+FROM node:18-alpine AS frontend-builder
 
 WORKDIR /frontend
-COPY frontend/ /frontend/
 
-RUN if [ ! -d dist ]; then yarn install && yarn build; fi
+# 1. Copy only dependency definitions first to leverage cache
+COPY frontend/package.json frontend/yarn.lock ./
 
+# 2. Install dependencies
+RUN yarn install --frozen-lockfile
 
-#####################################
-# Select correct Ultralytics base   #
-#####################################
-FROM scratch AS base
+# 3. Copy the rest of the frontend source code
+COPY frontend/ ./
 
-# AMD64 uses fixed Ultralytics CPU build
-FROM ultralytics/ultralytics:8.3.96-cpu AS base-amd64
-
-# ARM64 uses fixed Ultralytics ARM64 build
-FROM ultralytics/ultralytics:8.3.234-arm64 AS base-arm64
-
-# Dispatch to correct base image based on target architecture
-FROM base-${TARGETARCH} AS runtime
-
+# 4. Build
+RUN yarn build
 
 ####################################
 # Final Runtime Stage
 ####################################
+FROM python:3.12-slim-bookworm
+
 WORKDIR /docker-app
 
-# Copy backend
-COPY . .
+# 1. Copy python requirements first to leverage cache
+COPY requirements_docker.txt .
 
-# Install Python requirements
-RUN pip install --no-cache-dir -r requirements_docker.txt \
+# 2. Install Python requirements
+# Added build-base for compiling potential C-extensions
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
+    && pip install --no-cache-dir -r requirements_docker.txt \
+    && apt-get purge -y --auto-remove build-essential \
+    && rm -rf /var/lib/apt/lists/* \
     && rm -rf /root/.cache/pip
 
-# Copy built frontend
+# 3. Copy backend source code (ignoring files in .dockerignore)
+COPY . .
+
+# 4. Copy built frontend assets from the builder stage
 COPY --from=frontend-builder /frontend/dist /docker-app/frontend/dist
 
 EXPOSE 8070
