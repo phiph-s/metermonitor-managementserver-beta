@@ -3,7 +3,7 @@
 ########################
 # Frontend Build Stage #
 ########################
-FROM node:18-alpine AS frontend-builder
+FROM --platform=linux/amd64 node:18-alpine AS frontend-builder
 
 WORKDIR /frontend
 
