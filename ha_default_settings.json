@@ -1,4 +1,5 @@
 {
+    "is_ha": true,
     "ingress": true,
     "enable_auth": false,
     "secret_key": "change_me",

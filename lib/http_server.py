@@ -130,7 +130,13 @@ def prepare_setup_app(config, lifespan):
     def get_discovery():
         cursor = db_connection().cursor()
         cursor.execute("SELECT name, picture_timestamp, wifi_rssi FROM watermeters WHERE setup = 0")
-        return {"watermeters": [row for row in cursor.fetchall()]}
+        return {
+            "watermeters": [row for row in cursor.fetchall()],
+            "capabilities": {
+                "mqtt": True,
+                "ha": config["is_ha"],
+            }
+        }
 
     @app.post("/api/dataset/upload", dependencies=[Depends(authenticate)])
     def upload_dataset(payload: DatasetUpload):

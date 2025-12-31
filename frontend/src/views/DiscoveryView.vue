@@ -2,6 +2,13 @@
   <n-flex>
     <img src="@/assets/logo.png" alt="Logo" style="max-width: 100px"/>
     <n-button :loading="loading" @click="getData" round size="large">Refresh</n-button>
+    <n-button quaternary round size="large" type="primary" v-if="capabilities['ha']">
+      <template #icon>
+        <n-icon>
+          <AddTwotone />
+        </n-icon>
+      </template>Add from Entity
+    </n-button>
   </n-flex>
 
   <template v-if="discoveredMeters.length === 0 && waterMeters.length === 0 && config">
@@ -58,14 +65,16 @@
 
 <script setup>
 import {onMounted, ref} from 'vue';
-import {NH2, NFlex, NButton, NDivider} from 'naive-ui';
+import {NH2, NFlex, NButton, NDivider, NIcon} from 'naive-ui';
 import router from "@/router";
+import {AddTwotone} from "@vicons/material";
 import WaterMeterCard from "@/components/WaterMeterCard.vue";
 
 const discoveredMeters = ref([]);
 const waterMeters = ref([]);
 const loading = ref(false);
 const config = ref(null);
+const capabilities = ref({});
 
 const host = import.meta.env.VITE_HOST;
 
@@ -80,7 +89,9 @@ const getData = async () => {
   if (response.status === 401) {
     router.push({ path: '/unlock' });
   }
-  discoveredMeters.value = (await response.json())["watermeters"];
+  const r = await response.json();
+  discoveredMeters.value = r["watermeters"];
+  capabilities.value = r["capabilities"];
 
   response = await fetch(host + 'api/watermeters', {
     headers: {

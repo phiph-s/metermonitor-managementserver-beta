@@ -223,7 +223,6 @@ def run_migrations(db_file):
                 cursor.execute("UPDATE evaluations SET denied_digits = ? WHERE name = ?", (denied_json, name))
             print("[MIGRATION] Added 'denied_digits' column to 'evaluations' table and set default values")
 
-
         # add column th_digits_inverted to evaluations table if it doesn't exist yet
         # invert the th_digits and store in th_digits_inverted
         cursor.execute("PRAGMA table_info(evaluations)")
@@ -260,4 +259,16 @@ def run_migrations(db_file):
                 inverted_json = json.dumps(inverted_list)
                 cursor.execute("UPDATE evaluations SET th_digits_inverted = ? WHERE id = ?", (inverted_json, row_id))
             print("[MIGRATION] Added 'th_digits_inverted' column to 'evaluations' table and populated values")
+
+        # add comumn source_type to watermeters table if it doesn't exist yet
+        cursor.execute("PRAGMA table_info(watermeters)")
+        columns = [info[1] for info in cursor.fetchall()]
+        if 'source_type' not in columns:
+            cursor.execute('''
+                ALTER TABLE watermeters
+                ADD COLUMN source_type TEXT DEFAULT 'image'
+            ''')
+            print("[MIGRATION] Added 'source_type' column to 'watermeters' table")
+
+        conn.commit()
 

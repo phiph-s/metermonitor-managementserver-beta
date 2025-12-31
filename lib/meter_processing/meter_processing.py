@@ -8,6 +8,8 @@ import numpy as np
 from PIL import Image
 import onnxruntime as ort
 
+from lib.meter_processing.onnx_helpers import xywhr_to_poly, letterbox
+
 
 class MeterPredictor:
     """
@@ -57,6 +59,142 @@ class MeterPredictor:
         print(f"[MeterPredictor] YOLO input: {self.yolo_input_name}")
         print(f"[MeterPredictor] Digit classifier input: {self.digit_input_name}")
 
+    def _sigmoid(x: np.ndarray) -> np.ndarray:
+        return 1.0 / (1.0 + np.exp(-x))
+
+    def _infer_obb_polygon_best(self, input_image, conf_thres=0.15, debug=False):
+        # input_image: PIL.Image or np.ndarray (HWC RGB)
+        img0 = np.array(input_image)
+        if img0.ndim != 3:
+            raise ValueError("Expected HWC image")
+
+        inp = self.yolo_session.get_inputs()[0]
+        in_name = inp.name
+
+        # Determine model input size if fixed
+        try:
+            _, c, ih, iw = inp.shape  # e.g. [1,3,640,640] or [None,3,None,None]
+            if isinstance(ih, int) and isinstance(iw, int):
+                new_shape = (ih, iw)
+            else:
+                new_shape = (640, 640)
+        except Exception:
+            new_shape = (640, 640)
+
+        # Letterbox
+        img_lb, r, (pad_x, pad_y) = letterbox(img0, new_shape=new_shape)
+
+        # To NCHW float32
+        x = img_lb.astype(np.float32) / 255.0
+        x = np.transpose(x, (2, 0, 1))  # HWC->CHW
+        x = np.expand_dims(x, 0)  # BCHW
+
+        # Inference
+        outputs = self.yolo_session.run(None, {in_name: x})
+        out = outputs[0]
+
+        if debug:
+            flat = out.reshape(-1)
+            print("out shape:", out.shape, "dtype:", out.dtype, "min/max:", float(flat.min()), float(flat.max()))
+
+        # -------------------------
+        # Decode outputs
+        # -------------------------
+
+        cx = cy = w = h = ang = None
+        conf = None
+        cls = 0  # if single-class export, cls is always 0
+
+        # Case A: End2End/NMS baked in -> (1, N, 7+) or (N, 7+)
+        if out.ndim == 3 and out.shape[-1] >= 7:
+            det = out[0]  # (N, 7+)
+            # columns: cx,cy,w,h,ang,conf,cls
+            cx_all, cy_all, w_all, h_all, ang_all = det[:, 0], det[:, 1], det[:, 2], det[:, 3], det[:, 4]
+            conf_all = det[:, 5]
+            cls_all = det[:, 6].astype(np.int32)
+
+            keep = conf_all >= conf_thres
+            if not np.any(keep):
+                return None, None, None
+
+            best = np.where(keep)[0][np.argmax(conf_all[keep])]
+            cx, cy, w, h, ang = map(float, (cx_all[best], cy_all[best], w_all[best], h_all[best], ang_all[best]))
+            conf = float(conf_all[best])
+            cls = int(cls_all[best])
+
+        # Case B: Raw head -> (1, 6, 8400) (nc=1)  => [cx,cy,w,h,ang,conf]
+        elif out.ndim == 3 and out.shape[0] == 1 and out.shape[1] == 6 and out.shape[2] > 1000:
+            pred = out[0].T  # (8400, 6)
+
+            xywhr = pred[:, :5].astype(np.float32)  # (A, 5)
+            conf_all = pred[:, 5].astype(np.float32)  # (A,)
+
+            # Defensive: if conf looks like logits (often negative..positive), map to [0,1]
+            # Heuristic: if values are outside [0,1] range substantially, sigmoid.
+            if float(conf_all.min()) < -0.01 or float(conf_all.max()) > 1.01:
+                conf_all = _sigmoid(conf_all)
+
+            keep = conf_all >= conf_thres
+            if not np.any(keep):
+                return None, None, None
+
+            best = np.where(keep)[0][np.argmax(conf_all[keep])]
+            cx, cy, w, h, ang = map(float, xywhr[best])
+            conf = float(conf_all[best])
+            cls = 0
+
+        # Case C: Raw head generic -> (1, 5+nc, A) but nc>1
+        elif out.ndim == 3 and out.shape[0] == 1 and out.shape[2] > 1000 and out.shape[1] > 6:
+            # (1, C, A) -> (A, C)
+            pred = out[0].T
+            xywhr = pred[:, :5].astype(np.float32)
+            scores = pred[:, 5:].astype(np.float32)  # (A, nc)
+
+            # If scores are logits, you might need sigmoid/softmax depending on export;
+            # sigmoid is common for multi-label YOLO heads; using sigmoid defensively:
+            if float(scores.min()) < -0.01 or float(scores.max()) > 1.01:
+                scores = _sigmoid(scores)
+
+            cls_all = np.argmax(scores, axis=1).astype(np.int32)
+            conf_all = scores[np.arange(scores.shape[0]), cls_all]
+
+            keep = conf_all >= conf_thres
+            if not np.any(keep):
+                return None, None, None
+
+            best = np.where(keep)[0][np.argmax(conf_all[keep])]
+            cx, cy, w, h, ang = map(float, xywhr[best])
+            conf = float(conf_all[best])
+            cls = int(cls_all[best])
+
+        else:
+            raise RuntimeError(f"Unexpected ONNX output shape: {out.shape}")
+
+        if debug:
+            print("best raw (model space):", cx, cy, w, h, ang, "conf:", conf, "cls:", cls)
+
+        # -------------------------
+        # Undo letterbox to original image coords
+        # -------------------------
+        cx = (cx - pad_x) / r
+        cy = (cy - pad_y) / r
+        w = w / r
+        h = h / r
+
+        # Build polygon in original-image pixel space
+        poly8 = xywhr_to_poly(cx, cy, w, h, ang)
+
+        # Clip to image bounds
+        H0, W0 = img0.shape[:2]
+        poly = poly8.reshape(4, 2)
+        poly[:, 0] = np.clip(poly[:, 0], 0, W0 - 1)
+        poly[:, 1] = np.clip(poly[:, 1], 0, H0 - 1)
+
+        if debug:
+            print("best poly (orig space):", poly.reshape(-1))
+
+        return poly.reshape(-1), conf, cls
+
     def extract_display_and_segment(self, input_image, segments=7, rotated_180=False, extended_last_digit=False, shrink_last_3=False, target_brightness=None):
         """
         Predicts the water meter reading on a single image:
@@ -78,213 +216,15 @@ class MeterPredictor:
             #  is image.py
             input_image = input_image.rotate(180, expand=True)
 
-        print(f"[Predictor] Running YOLO region-of-interest detection...")
+        print("[Predictor] Running YOLO region-of-interest detection...")
 
-        # Prepare image for YOLO ONNX model
-        img_np = np.array(input_image)
-        original_height, original_width = img_np.shape[:2]
+        obb_coords, best_conf, best_cls = self._infer_obb_polygon_best(input_image, conf_thres=0.15)
 
-        # Letterbox resizing (maintain aspect ratio)
-        target_size = 640
-        scale = min(target_size / original_width, target_size / original_height)
-        new_w = int(original_width * scale)
-        new_h = int(original_height * scale)
+        if obb_coords is None:
+            print("[Predictor] No instances detected in the image.")
+            return [], [], None
 
-        img_resized = cv2.resize(img_np, (new_w, new_h))
-
-        # Create canvas with padding (114 is standard YOLO padding color)
-        canvas = np.full((target_size, target_size, 3), 114, dtype=np.uint8)
-
-        # Center the image
-        top = (target_size - new_h) // 2
-        left = (target_size - new_w) // 2
-        canvas[top:top+new_h, left:left+new_w] = img_resized
-
-        # Convert RGB to BGR if needed
-        if len(canvas.shape) == 3 and canvas.shape[2] == 3:
-            canvas = cv2.cvtColor(canvas, cv2.COLOR_RGB2BGR)
-
-        # Normalize and prepare for ONNX (CHW format)
-        img_normalized = canvas.astype(np.float32) / 255.0
-        img_transposed = img_normalized.transpose(2, 0, 1)  # HWC to CHW
-        img_batch = np.expand_dims(img_transposed, axis=0)  # Add batch dimension
-
-        # Run YOLO ONNX inference
-        try:
-            outputs = self.yolo_session.run(None, {self.yolo_input_name: img_batch})
-        except Exception as e:
-            print(f"[Predictor] YOLO inference failed: {e}")
-            return [], [], None, None
-
-        # YOLO OBB output format:
-        # outputs[0] shape is typically [batch, num_preds, num_values]
-        # For OBB: [batch, num_preds, 7+num_classes] where 7 = [x, y, w, h, rotation, confidence, class_id]
-        # OR [batch, features, anchors] e.g. [1, 6, 8400]
-
-        output = outputs[0]
-
-        # Transpose if features are in the second dimension (channels first)
-        # e.g. [1, 6, 8400] -> [1, 8400, 6]
-        if output.shape[1] < output.shape[2]:
-            output = output.transpose(0, 2, 1)
-
-        predictions = output[0]  # Remove batch dimension
-
-        # Filter by confidence
-        # For OBB with 1 class, we expect 6 features.
-        # The order varies by version. It could be [x, y, w, h, rotation, confidence] or [x, y, w, h, confidence, rotation]
-
-        # Heuristic to determine which channel is confidence and which is rotation
-        # Confidence is strictly [0, 1]. Rotation is in radians (approx -1.57 to 1.57) and can be > 1.
-
-        if predictions.shape[1] == 6:
-            col4 = predictions[:, 4]
-            col5 = predictions[:, 5]
-
-            max4 = np.max(col4)
-            max5 = np.max(col5)
-
-            # If one column has values > 1.0, it must be rotation
-            if max5 > 1.05:
-                confidence_idx = 4
-                rotation_idx = 5
-                print(f"[Predictor] Detected format: [x, y, w, h, conf, rot] (max col5={max5:.2f})")
-            elif max4 > 1.05:
-                confidence_idx = 5
-                rotation_idx = 4
-                print(f"[Predictor] Detected format: [x, y, w, h, rot, conf] (max col4={max4:.2f})")
-            else:
-                # Ambiguous if both are small.
-                # Default to index 4 as confidence (common in newer versions: xywh + conf + rot)
-                confidence_idx = 4
-                rotation_idx = 5
-                print(f"[Predictor] Ambiguous format (max values <= 1.0). Defaulting to [x, y, w, h, conf, rot]")
-
-        elif predictions.shape[1] >= 7:
-             # [x, y, w, h, conf, class..., rot] or similar
-             # Usually rotation is the last one or after coords
-             # Let's assume standard YOLOv8/11 OBB: [x, y, w, h, split_conf?, rot?]
-             # Actually, often it is [x, y, w, h, class_probs..., rot]
-             # If 1 class: [x, y, w, h, class_prob, rot] -> same as 6 channels
-
-             # If we have 7 channels, maybe 2 classes?
-             # [x, y, w, h, class1, class2, rot]
-
-             # Rotation is likely the last channel or the one with values > 1
-
-             # Find channel with max > 1.05
-             rotation_idx = -1
-             for i in range(4, predictions.shape[1]):
-                 if np.max(predictions[:, i]) > 1.05:
-                     rotation_idx = i
-                     break
-
-             if rotation_idx != -1:
-                 # If we found rotation, the rest are classes/confidence
-                 # Take max of other channels as confidence
-                 class_indices = [i for i in range(4, predictions.shape[1]) if i != rotation_idx]
-                 confidence_idx = class_indices[0] # Just for scalar indexing if needed
-                 # But we should take max over class indices
-             else:
-                 # Fallback
-                 rotation_idx = predictions.shape[1] - 1
-                 confidence_idx = 4
-
-        if predictions.shape[1] >= 6:
-            if predictions.shape[1] > 6:
-                # Multiple classes or class probs, take max of all class columns
-                # Exclude rotation index
-                class_cols = [i for i in range(4, predictions.shape[1]) if i != rotation_idx]
-                if class_cols:
-                    confidences = np.max(predictions[:, class_cols], axis=1)
-                else:
-                    confidences = predictions[:, confidence_idx]
-            else:
-                confidences = predictions[:, confidence_idx]
-        else:
-             confidences = predictions[:, confidence_idx]
-
-        valid_mask = confidences > 0.15
-
-        if not np.any(valid_mask):
-            print(f"[Predictor] No instances detected with confidence > 0.15")
-            return [], [], None, None
-
-        valid_predictions = predictions[valid_mask]
-        valid_confidences = confidences[valid_mask]
-
-        # Get the detection with highest confidence
-        best_idx = np.argmax(valid_confidences)
-        detection = valid_predictions[best_idx]
-
-        print(f"[Predictor] Raw detection: {detection}")
-        print(f"[Predictor] Confidence: {valid_confidences[best_idx]:.4f}")
-        print(f"[Predictor] Rotation: {detection[rotation_idx]:.4f}")
-        print(f"[Predictor] Original size: {original_width}x{original_height}")
-
-        # Extract OBB parameters (x_center, y_center, width, height, rotation)
-        x_center_norm = detection[0]
-        y_center_norm = detection[1]
-        width_norm = detection[2]
-        height_norm = detection[3]
-
-        # Handle rotation angle
-        rotation = detection[rotation_idx]  # In radians
-
-        # Scale back to original image size
-        # Check if coordinates are normalized (0-1) or pixels (0-640)
-        if x_center_norm < 2.0 and y_center_norm < 2.0 and width_norm < 2.0 and height_norm < 2.0:
-             # Normalized coordinates -> convert to pixels in 640x640 space first
-             x_center_pixel = x_center_norm * 640.0
-             y_center_pixel = y_center_norm * 640.0
-             width_pixel = width_norm * 640.0
-             height_pixel = height_norm * 640.0
-        else:
-             # Pixel coordinates
-             x_center_pixel = x_center_norm
-             y_center_pixel = y_center_norm
-             width_pixel = width_norm
-             height_pixel = height_norm
-
-        # Adjust for letterboxing
-        # 1. Remove padding shift
-        x_center_pixel -= left
-        y_center_pixel -= top
-
-        # 2. Scale back to original size
-        x_center = x_center_pixel / scale
-        y_center = y_center_pixel / scale
-        width = width_pixel / scale
-        height = height_pixel / scale
-
-        # Convert OBB (center, size, rotation) to 4 corner points
-        # Create corner offsets (unrotated box)
-        hw = width / 2.0
-        hh = height / 2.0
-
-        corners_unrotated = np.array([
-            [-hw, -hh],  # top-left
-            [hw, -hh],   # top-right
-            [hw, hh],    # bottom-right
-            [-hw, hh]    # bottom-left
-        ], dtype=np.float32)
-
-        # Apply rotation
-        cos_r = np.cos(rotation)
-        sin_r = np.sin(rotation)
-        rotation_matrix = np.array([
-            [cos_r, -sin_r],
-            [sin_r, cos_r]
-        ], dtype=np.float32)
-
-        corners_rotated = corners_unrotated @ rotation_matrix.T
-
-        # Translate to center position
-        obb_coords = corners_rotated + np.array([x_center, y_center], dtype=np.float32)
-
-        img = img_np
-
-        # 1. Cut out the detected OBB
+        img = np.array(input_image)
 
         # Reshape OBB coordinates into four (x,y) points
         points = obb_coords.reshape(4, 2).astype(np.float32)
