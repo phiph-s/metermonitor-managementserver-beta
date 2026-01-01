@@ -4,11 +4,12 @@
     "mqtt": {
       "broker": "192.168.178.33",
       "port": 1883,
-      "topic": "MeterMonitor/#",
+      "topic": "MeterMonitorDEV/#",
       "username": "esp",
       "password": "esp"
     },
     "ingress": false,
+    "is_ha": true,
     "allow_negative_correction": true,
     "enable_auth": true,
     "secret_key": "change_me",
