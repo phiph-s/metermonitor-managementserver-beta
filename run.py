@@ -59,7 +59,10 @@ cursor.execute('''
                 picture_data TEXT,
                 setup BOOLEAN DEFAULT 0,
                 picture_data_bbox BLOB,
-                source_type TEXT DEFAULT 'mqtt'
+                source_type TEXT DEFAULT 'mqtt',
+                ha_entity_camera TEXT DEFAULT NULL,
+                ha_entity_led TEXT DEFAULT NULL,
+                ha_frequency INTEGER DEFAULT 600
             )
         ''')
 cursor.execute('''

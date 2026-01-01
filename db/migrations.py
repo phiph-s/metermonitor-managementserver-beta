@@ -270,5 +270,26 @@ def run_migrations(db_file):
             ''')
             print("[MIGRATION] Added 'source_type' column to 'watermeters' table")
 
-        conn.commit()
+        # add column ha_entity_camera, ha_entity_LED, ha_frequency to watermeters table if they don't exist yet
+        cursor.execute("PRAGMA table_info(watermeters)")
+        columns = [info[1] for info in cursor.fetchall()]
+        if 'ha_entity_camera' not in columns:
+            cursor.execute('''
+                ALTER TABLE watermeters
+                ADD COLUMN ha_entity_camera TEXT DEFAULT NULL
+            ''')
+            print("[MIGRATION] Added 'ha_entity_camera' column to 'watermeters' table")
+        if 'ha_entity_led' not in columns:
+            cursor.execute('''
+                ALTER TABLE watermeters
+                ADD COLUMN ha_entity_led TEXT DEFAULT NULL
+            ''')
+            print("[MIGRATION] Added 'ha_entity_led' column to 'watermeters' table")
+        if 'ha_frequency' not in columns:
+            cursor.execute('''
+                ALTER TABLE watermeters
+                ADD COLUMN ha_frequency INTEGER DEFAULT 600
+            ''')
+            print("[MIGRATION] Added 'ha_frequency' column to 'watermeters' table")
 
+        conn.commit()

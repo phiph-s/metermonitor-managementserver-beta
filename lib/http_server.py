@@ -15,6 +15,7 @@ import sqlite3
 import zlib
 import re
 from typing import List, Optional
+import aiohttp
 
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse, FileResponse, StreamingResponse
@@ -120,6 +121,12 @@ def prepare_setup_app(config, lifespan):
         labels: List[str]
         colored: List[str]
         thresholded: List[str]
+
+    class HAWatermeterRequest(BaseModel):
+        name: str
+        ha_entity_camera: str
+        ha_frequency: int
+        ha_entity_led: Optional[str] = None
 
     # Helper to sanitize meter name for filenames
     def _sanitize_name(name: str) -> str:
@@ -286,6 +293,53 @@ def prepare_setup_app(config, lifespan):
         del tconfig['secret_key']
         return tconfig
 
+    @app.get("/api/ha/entities", dependencies=[Depends(authenticate)])
+    async def get_ha_entities(entity_type: Optional[str] = None):
+        """
+        Fetch Home Assistant entities when running as HA addon.
+        Query params:
+        - entity_type: Filter by entity type (e.g., 'camera', 'light')
+        """
+        if not config.get('is_ha', False):
+            raise HTTPException(status_code=400, detail="Not running as Home Assistant addon")
+
+        try:
+            # Use Home Assistant Supervisor API to get states
+            supervisor_token = os.environ.get('SUPERVISOR_TOKEN')
+            if not supervisor_token:
+                raise HTTPException(status_code=500, detail="SUPERVISOR_TOKEN not found")
+
+            async with aiohttp.ClientSession() as session:
+                headers = {
+                    "Authorization": f"Bearer {supervisor_token}",
+                    "Content-Type": "application/json"
+                }
+
+                # Call Home Assistant Core API via Supervisor
+                url = "http://supervisor/core/api/states"
+                async with session.get(url, headers=headers) as resp:
+                    if resp.status != 200:
+                        text = await resp.text()
+                        raise HTTPException(status_code=resp.status, detail=f"HA API error: {text}")
+
+                    states = await resp.json()
+
+                    # Filter entities if type is specified
+                    if entity_type:
+                        filtered = [
+                            entity for entity in states
+                            if entity.get('entity_id', '').startswith(f"{entity_type}.")
+                        ]
+                        return {"entities": filtered}
+
+                    # Return all entities
+                    return {"entities": states}
+
+        except aiohttp.ClientError as e:
+            raise HTTPException(status_code=500, detail=f"Failed to connect to Home Assistant: {str(e)}")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error fetching entities: {str(e)}")
+
     @app.get("/api/watermeters", dependencies=[Depends(authenticate)])
     def get_watermeters():
         cursor = db_connection().cursor()
@@ -405,6 +459,58 @@ def prepare_setup_app(config, lifespan):
         )
         db.commit()
         return {"message": "Watermeter configured", "name": config.name}
+
+    @app.post("/api/watermeters/ha", dependencies=[Depends(authenticate)])
+    def create_ha_watermeter(ha_config: HAWatermeterRequest):
+        """
+        Create a new watermeter based on Home Assistant entities.
+        Requires:
+        - name: Unique name for the watermeter
+        - ha_entity_camera: Camera entity ID (e.g., 'camera.esp32_cam')
+        - ha_frequency: Polling frequency in seconds
+        - ha_entity_led: (Optional) LED/Light entity ID for illumination (e.g., 'light.esp32_led')
+        """
+        if not config.get('is_ha', False):
+            raise HTTPException(status_code=400, detail="Not running as Home Assistant addon")
+
+        db = db_connection()
+        cursor = db.cursor()
+
+        # Check if watermeter with this name already exists
+        cursor.execute("SELECT name FROM watermeters WHERE name = ?", (ha_config.name,))
+        if cursor.fetchone():
+            raise HTTPException(status_code=400, detail=f"Watermeter with name '{ha_config.name}' already exists")
+
+        try:
+            # Insert new HA-based watermeter with source_type='ha'
+            cursor.execute(
+                """
+                INSERT INTO watermeters (
+                    name, source_type, ha_entity_camera, ha_entity_led, ha_frequency, setup
+                ) VALUES (?, ?, ?, ?, ?, 0)
+                """,
+                (
+                    ha_config.name,
+                    'ha',
+                    ha_config.ha_entity_camera,
+                    ha_config.ha_entity_led,
+                    ha_config.ha_frequency
+                )
+            )
+            db.commit()
+
+            return {
+                "message": "HA watermeter created successfully",
+                "name": ha_config.name,
+                "source_type": "ha",
+                "ha_entity_camera": ha_config.ha_entity_camera,
+                "ha_entity_led": ha_config.ha_entity_led,
+                "ha_frequency": ha_config.ha_frequency
+            }
+        except sqlite3.IntegrityError as e:
+            raise HTTPException(status_code=400, detail=f"Database error: {str(e)}")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to create watermeter: {str(e)}")
 
     @app.get("/api/settings/{name}", dependencies=[Depends(authenticate)])
     @app.get("/api/watermeters/{name}/settings", dependencies=[Depends(authenticate)])

@@ -1,4 +1,5 @@
 <template>
+  <n-message-provider>
     <n-config-provider :theme="darkTheme" :theme-overrides="themeOverrides">
         <n-dialog-provider>
           <n-notification-provider :placement="'bottom-right'">
@@ -6,11 +7,12 @@
           </n-notification-provider>
         </n-dialog-provider>
     </n-config-provider>
+  </n-message-provider>
 </template>
 
 <script setup>
 import App from "@/App.vue";
-import { NConfigProvider, NDialogProvider, NNotificationProvider } from 'naive-ui';
+import { NConfigProvider, NDialogProvider, NNotificationProvider, NMessageProvider } from 'naive-ui';
 import { darkTheme } from 'naive-ui';
 
 /**

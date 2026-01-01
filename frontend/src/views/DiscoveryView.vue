@@ -2,7 +2,7 @@
   <n-flex>
     <img src="@/assets/logo.png" alt="Logo" style="max-width: 100px"/>
     <n-button :loading="loading" @click="getData" round size="large">Refresh</n-button>
-    <n-button quaternary round size="large" type="primary" v-if="capabilities['ha']">
+    <n-button quaternary round size="large" type="primary" v-if="capabilities['ha']" @click="showHADialog = true">
       <template #icon>
         <n-icon>
           <AddTwotone />
@@ -10,6 +10,8 @@
       </template>Add from Entity
     </n-button>
   </n-flex>
+
+  <HAWatermeterDialog v-model:show="showHADialog" @created="onWatermeterCreated" />
 
   <template v-if="discoveredMeters.length === 0 && waterMeters.length === 0 && config">
     <n-h2>Setup your first monitoring device</n-h2>
@@ -69,12 +71,14 @@ import {NH2, NFlex, NButton, NDivider, NIcon} from 'naive-ui';
 import router from "@/router";
 import {AddTwotone} from "@vicons/material";
 import WaterMeterCard from "@/components/WaterMeterCard.vue";
+import HAWatermeterDialog from "@/components/HAWatermeterDialog.vue";
 
 const discoveredMeters = ref([]);
 const waterMeters = ref([]);
 const loading = ref(false);
 const config = ref(null);
 const capabilities = ref({});
+const showHADialog = ref(false);
 
 const host = import.meta.env.VITE_HOST;
 
@@ -107,6 +111,11 @@ const getData = async () => {
     }
   });
   config.value = await response.json();
+}
+
+const onWatermeterCreated = () => {
+  // Refresh the list after a watermeter is created
+  getData();
 }
 
 onMounted(() => {
