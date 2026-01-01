@@ -62,8 +62,7 @@ class MeterPredictor:
     def _sigmoid(x: np.ndarray) -> np.ndarray:
         return 1.0 / (1.0 + np.exp(-x))
 
-    def _infer_obb_polygon_best(self, input_image, conf_thres=0.15, debug=False):
-        # input_image: PIL.Image or np.ndarray (HWC RGB)
+    def _infer_obb_polygon_best(self, input_image, conf_thres=0.15):
         img0 = np.array(input_image)
         if img0.ndim != 3:
             raise ValueError("Expected HWC image")
@@ -73,7 +72,7 @@ class MeterPredictor:
 
         # Determine model input size if fixed
         try:
-            _, c, ih, iw = inp.shape  # e.g. [1,3,640,640] or [None,3,None,None]
+            _, c, ih, iw = inp.shape
             if isinstance(ih, int) and isinstance(iw, int):
                 new_shape = (ih, iw)
             else:
@@ -86,102 +85,58 @@ class MeterPredictor:
 
         # To NCHW float32
         x = img_lb.astype(np.float32) / 255.0
-        x = np.transpose(x, (2, 0, 1))  # HWC->CHW
-        x = np.expand_dims(x, 0)  # BCHW
+        x = np.transpose(x, (2, 0, 1))
+        x = np.expand_dims(x, 0)
 
         # Inference
-        outputs = self.yolo_session.run(None, {in_name: x})
-        out = outputs[0]
+        out = self.yolo_session.run(None, {in_name: x})[0]
 
-        if debug:
-            flat = out.reshape(-1)
-            print("out shape:", out.shape, "dtype:", out.dtype, "min/max:", float(flat.min()), float(flat.max()))
-
-        # -------------------------
-        # Decode outputs
-        # -------------------------
-
-        cx = cy = w = h = ang = None
-        conf = None
-        cls = 0  # if single-class export, cls is always 0
-
-        # Case A: End2End/NMS baked in -> (1, N, 7+) or (N, 7+)
-        if out.ndim == 3 and out.shape[-1] >= 7:
-            det = out[0]  # (N, 7+)
-            # columns: cx,cy,w,h,ang,conf,cls
-            cx_all, cy_all, w_all, h_all, ang_all = det[:, 0], det[:, 1], det[:, 2], det[:, 3], det[:, 4]
-            conf_all = det[:, 5]
-            cls_all = det[:, 6].astype(np.int32)
-
-            keep = conf_all >= conf_thres
-            if not np.any(keep):
-                return None, None, None
-
-            best = np.where(keep)[0][np.argmax(conf_all[keep])]
-            cx, cy, w, h, ang = map(float, (cx_all[best], cy_all[best], w_all[best], h_all[best], ang_all[best]))
-            conf = float(conf_all[best])
-            cls = int(cls_all[best])
-
-        # Case B: Raw head -> (1, 6, 8400) (nc=1)  => [cx,cy,w,h,ang,conf]
-        elif out.ndim == 3 and out.shape[0] == 1 and out.shape[1] == 6 and out.shape[2] > 1000:
-            pred = out[0].T  # (8400, 6)
-
-            xywhr = pred[:, :5].astype(np.float32)  # (A, 5)
-            conf_all = pred[:, 5].astype(np.float32)  # (A,)
-
-            # Defensive: if conf looks like logits (often negative..positive), map to [0,1]
-            # Heuristic: if values are outside [0,1] range substantially, sigmoid.
-            if float(conf_all.min()) < -0.01 or float(conf_all.max()) > 1.01:
-                conf_all = _sigmoid(conf_all)
-
-            keep = conf_all >= conf_thres
-            if not np.any(keep):
-                return None, None, None
-
-            best = np.where(keep)[0][np.argmax(conf_all[keep])]
-            cx, cy, w, h, ang = map(float, xywhr[best])
-            conf = float(conf_all[best])
-            cls = 0
-
-        # Case C: Raw head generic -> (1, 5+nc, A) but nc>1
-        elif out.ndim == 3 and out.shape[0] == 1 and out.shape[2] > 1000 and out.shape[1] > 6:
-            # (1, C, A) -> (A, C)
-            pred = out[0].T
-            xywhr = pred[:, :5].astype(np.float32)
-            scores = pred[:, 5:].astype(np.float32)  # (A, nc)
-
-            # If scores are logits, you might need sigmoid/softmax depending on export;
-            # sigmoid is common for multi-label YOLO heads; using sigmoid defensively:
-            if float(scores.min()) < -0.01 or float(scores.max()) > 1.01:
-                scores = _sigmoid(scores)
-
-            cls_all = np.argmax(scores, axis=1).astype(np.int32)
-            conf_all = scores[np.arange(scores.shape[0]), cls_all]
-
-            keep = conf_all >= conf_thres
-            if not np.any(keep):
-                return None, None, None
-
-            best = np.where(keep)[0][np.argmax(conf_all[keep])]
-            cx, cy, w, h, ang = map(float, xywhr[best])
-            conf = float(conf_all[best])
-            cls = int(cls_all[best])
-
-        else:
+        # Expect raw-head OBB: (1, 4+nc+1, A) e.g. (1,6,8400)
+        if not (out.ndim == 3 and out.shape[0] == 1 and out.shape[2] > 1000 and out.shape[1] >= 6):
             raise RuntimeError(f"Unexpected ONNX output shape: {out.shape}")
 
-        if debug:
-            print("best raw (model space):", cx, cy, w, h, ang, "conf:", conf, "cls:", cls)
+        # Reddit guide: transpose to (b, A, 4+nc+1) then:
+        # confs, labels = output[..., 4:4+nc].max(-1)
+        # angles = output[..., 4+nc:]  (last value) :contentReference[oaicite:1]{index=1}
+        pred = out.transpose(0, 2, 1)  # (1, A, C)
+        pred = pred[0]  # (A, C)
 
-        # -------------------------
-        # Undo letterbox to original image coords
-        # -------------------------
+        A, C = pred.shape
+        nc = C - 5  # because C = 4 + nc + 1  => nc = C - 5
+        if nc < 1:
+            raise RuntimeError(f"Invalid channel count for OBB: C={C}")
+
+        xywh = pred[:, 0:4].astype(np.float32)  # (A,4)  x,y,w,h
+        class_scores = pred[:, 4:4 + nc].astype(np.float32)  # (A,nc)
+        ang_all = pred[:, 4 + nc].astype(np.float32)  # (A,) angle (radians), last channel
+
+        # best class per anchor (for nc=1 it's just that one column)
+        cls_all = np.argmax(class_scores, axis=1).astype(np.int32)
+        conf_all = class_scores[np.arange(A), cls_all]
+
+        # defensive: if exported as logits, map to [0,1]
+        # (heuristic from practice; reddit notes "no softmax needed" generally, but exports vary)
+        if float(conf_all.min()) < -0.01 or float(conf_all.max()) > 1.01:
+            conf_all = _sigmoid(conf_all)
+
+        keep = conf_all >= conf_thres
+        if not np.any(keep):
+            return None, None, None
+
+        best = np.where(keep)[0][np.argmax(conf_all[keep])]
+
+        cx, cy, w, h = map(float, xywh[best])  # x,y,w,h are center-based in YOLO-style heads
+        ang = float(ang_all[best])
+        conf = float(conf_all[best])
+        cls = int(cls_all[best])
+
+        # Undo letterbox back to original image space
         cx = (cx - pad_x) / r
         cy = (cy - pad_y) / r
         w = w / r
         h = h / r
 
-        # Build polygon in original-image pixel space
+        # Convert xywhr -> polygon corners (8 values)
         poly8 = xywhr_to_poly(cx, cy, w, h, ang)
 
         # Clip to image bounds
@@ -189,9 +144,6 @@ class MeterPredictor:
         poly = poly8.reshape(4, 2)
         poly[:, 0] = np.clip(poly[:, 0], 0, W0 - 1)
         poly[:, 1] = np.clip(poly[:, 1], 0, H0 - 1)
-
-        if debug:
-            print("best poly (orig space):", poly.reshape(-1))
 
         return poly.reshape(-1), conf, cls
 
