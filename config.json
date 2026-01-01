@@ -7,6 +7,7 @@
   "startup": "services",
   "arch": ["aarch64", "amd64"],
   "ingress": true,
+  "homeassistant_api": true,
   "panel_icon": "mdi:gauge",
   "ingress_port": 8070,
   "environment": {
