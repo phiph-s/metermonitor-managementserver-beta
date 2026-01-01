@@ -266,7 +266,7 @@ def run_migrations(db_file):
         if 'source_type' not in columns:
             cursor.execute('''
                 ALTER TABLE watermeters
-                ADD COLUMN source_type TEXT DEFAULT 'image'
+                ADD COLUMN source_type TEXT DEFAULT 'mqtt'
             ''')
             print("[MIGRATION] Added 'source_type' column to 'watermeters' table")
 

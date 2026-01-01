@@ -41,8 +41,6 @@ def reevaluate_digits(db_file: str, name: str, meter_preditor, config, offset: i
 
         # parse the eval (json)
         raw_images = json.loads(row[0])
-        print (f"[ExampleSet ({name})] Found example set, {len(raw_images)} images")
-
         # convert to np arrays (from base64)
         digits = []
         for raw_image in raw_images:

@@ -57,7 +57,9 @@ cursor.execute('''
                 picture_height INTEGER,
                 picture_length INTEGER,
                 picture_data TEXT,
-                setup BOOLEAN DEFAULT 0
+                setup BOOLEAN DEFAULT 0,
+                picture_data_bbox BLOB,
+                source_type TEXT DEFAULT 'mqtt'
             )
         ''')
 cursor.execute('''
@@ -73,23 +75,34 @@ cursor.execute('''
                 shrink_last_3 BOOLEAN,
                 extended_last_digit BOOLEAN,
                 max_flow_rate FLOAT,
+                conf_threshold REAL DEFAULT NULL,
                 FOREIGN KEY(name) REFERENCES watermeters(name)
             )
         ''')
 # Add evaluations table
 cursor.execute('''
             CREATE TABLE IF NOT EXISTS evaluations (
-                name TEXT,
-                eval TEXT,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                colored_digits TEXT,
+                th_digits TEXT,
+                predictions TEXT,
+                timestamp DATETIME,
+                result INTEGER,
+                total_confidence REAL,
+                outdated BOOLEAN DEFAULT 0,
+                denied_digits TEXT,
+                th_digits_inverted TEXT,
                 FOREIGN KEY(name) REFERENCES watermeters(name)
             )
         ''')
 cursor.execute('''
             CREATE TABLE IF NOT EXISTS history (
-                name TEXT,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
                 value INTEGER,
-                confidence FLOAT,
-                target_brightness FLOAT,
+                confidence REAL,
+                target_brightness REAL,
                 timestamp TEXT,
                 manual BOOLEAN,
                 FOREIGN KEY(name) REFERENCES watermeters(name)
